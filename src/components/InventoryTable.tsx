@@ -1,28 +1,76 @@
 
-import React, { useState } from 'react';
-import { useApp } from '@/context/AppContext';
+import React, { useState, useEffect } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Plus, Minus, Save } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  quantity: number;
+  unit: string;
+  min_level: number;
+  category: string;
+}
 
 interface InventoryTableProps {
   category: string;
   searchTerm: string;
+  onInventoryUpdated?: () => void;
 }
 
-const InventoryTable: React.FC<InventoryTableProps> = ({ category, searchTerm }) => {
-  const { inventoryItems, updateInventoryItem } = useApp();
+const InventoryTable: React.FC<InventoryTableProps> = ({ 
+  category, 
+  searchTerm,
+  onInventoryUpdated 
+}) => {
+  const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [updatedValues, setUpdatedValues] = useState<Record<string, number>>({});
 
-  const filteredItems = inventoryItems
-    .filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = category === 'all' || item.category === category;
-      return matchesSearch && matchesCategory;
-    });
+  useEffect(() => {
+    fetchInventoryItems();
+  }, [category, searchTerm]);
+
+  const fetchInventoryItems = async () => {
+    try {
+      setLoading(true);
+      let query = supabase.from('inventory_items').select('*');
+      
+      // Apply category filter if not 'all'
+      if (category !== 'all') {
+        query = query.eq('category', category);
+      }
+      
+      // Apply search term if present
+      if (searchTerm) {
+        query = query.ilike('name', `%${searchTerm}%`);
+      }
+      
+      // Sort by name
+      query = query.order('name');
+      
+      const { data, error } = await query;
+      
+      if (error) throw error;
+      
+      setInventoryItems(data || []);
+    } catch (error) {
+      console.error('Error fetching inventory items:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load inventory items",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
   
   const handleUpdateQuantity = (id: string, amount: number) => {
     const currentItem = inventoryItems.find(item => item.id === id);
@@ -39,23 +87,56 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ category, searchTerm })
     setUpdatedValues(prev => ({ ...prev, [id]: Math.max(0, numValue) }));
   };
   
-  const saveUpdatedQuantity = (id: string) => {
-    if (updatedValues[id] !== undefined) {
-      updateInventoryItem(id, updatedValues[id]);
+  const saveUpdatedQuantity = async (id: string) => {
+    if (updatedValues[id] === undefined) return;
+    
+    try {
+      const { error } = await supabase
+        .from('inventory_items')
+        .update({ quantity: updatedValues[id] })
+        .eq('id', id);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setInventoryItems(items => 
+        items.map(item => 
+          item.id === id ? { ...item, quantity: updatedValues[id] } : item
+        )
+      );
+      
       // Clear the updated value after saving
       setUpdatedValues(prev => {
         const newValues = { ...prev };
         delete newValues[id];
         return newValues;
       });
+      
+      toast({
+        title: "Inventory Updated",
+        description: "Inventory quantity has been updated successfully",
+      });
+      
+      // Notify parent component if needed
+      if (onInventoryUpdated) {
+        onInventoryUpdated();
+      }
+      
+    } catch (error) {
+      console.error('Error updating inventory:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update inventory quantity",
+        variant: "destructive"
+      });
     }
   };
   
-  const getLevelIndicator = (item: typeof inventoryItems[0]) => {
-    if (item.quantity <= item.minLevel * 0.5) {
+  const getLevelIndicator = (item: InventoryItem) => {
+    if (item.quantity <= item.min_level * 0.5) {
       return <Badge variant="destructive">Low</Badge>;
     }
-    if (item.quantity <= item.minLevel) {
+    if (item.quantity <= item.min_level) {
       return <Badge variant="outline" className="border-orange-400 text-orange-400">Warning</Badge>;
     }
     return <Badge variant="outline" className="border-green-500 text-green-500">Good</Badge>;
@@ -75,8 +156,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({ category, searchTerm })
           </TableRow>
         </TableHeader>
         <TableBody>
-          {filteredItems.length > 0 ? (
-            filteredItems.map((item) => {
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                Loading inventory items...
+              </TableCell>
+            </TableRow>
+          ) : inventoryItems.length > 0 ? (
+            inventoryItems.map((item) => {
               const isUpdating = updatedValues[item.id] !== undefined;
               const displayQuantity = isUpdating ? updatedValues[item.id] : item.quantity;
               

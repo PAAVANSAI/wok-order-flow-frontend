@@ -1,18 +1,26 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import NavBar from '@/components/NavBar';
 import Header from '@/components/Header';
 import InventoryTable from '@/components/InventoryTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Search, Filter } from 'lucide-react';
+import { Search, Filter, PlusCircle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import AddInventoryItemDialog from '@/components/AddInventoryItemDialog';
+import { supabase } from '@/integrations/supabase/client';
 
 const InventoryManager = () => {
   const { inventoryItems, totalOrders, totalRevenue } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [inventoryStats, setInventoryStats] = useState({
+    totalItems: 0,
+    lowStockItems: 0
+  });
 
   const categories = [
     { id: 'all', name: 'All Items' },
@@ -24,7 +32,34 @@ const InventoryManager = () => {
     { id: 'other', name: 'Other' }
   ];
   
-  const lowStockItems = inventoryItems.filter(item => item.quantity <= item.minLevel);
+  const refreshInventoryStats = async () => {
+    try {
+      // Get all inventory items
+      const { data: allItems, error: itemsError } = await supabase
+        .from('inventory_items')
+        .select('*');
+        
+      if (itemsError) throw itemsError;
+      
+      // Calculate low stock items
+      const lowStock = allItems ? allItems.filter(item => item.quantity <= item.min_level).length : 0;
+      
+      setInventoryStats({
+        totalItems: allItems ? allItems.length : 0,
+        lowStockItems: lowStock
+      });
+    } catch (error) {
+      console.error('Error fetching inventory stats:', error);
+    }
+  };
+  
+  useEffect(() => {
+    refreshInventoryStats();
+  }, []);
+  
+  const handleItemsAdded = () => {
+    refreshInventoryStats();
+  };
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -40,7 +75,7 @@ const InventoryManager = () => {
                 <CardTitle className="text-lg">Total Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{inventoryItems.length}</p>
+                <p className="text-3xl font-bold">{inventoryStats.totalItems}</p>
               </CardContent>
             </Card>
             
@@ -49,7 +84,7 @@ const InventoryManager = () => {
                 <CardTitle className="text-lg">Low Stock Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-orange-500">{lowStockItems.length}</p>
+                <p className="text-3xl font-bold text-orange-500">{inventoryStats.lowStockItems}</p>
               </CardContent>
             </Card>
             
@@ -96,10 +131,30 @@ const InventoryManager = () => {
                 </TabsList>
               </div>
             </Tabs>
+            
+            {/* Add Item Button */}
+            <Button 
+              className="ml-auto bg-chickey-primary hover:bg-chickey-primary/90"
+              onClick={() => setIsAddDialogOpen(true)}
+            >
+              <PlusCircle className="h-4 w-4 mr-2" />
+              Add New Item
+            </Button>
           </div>
           
           {/* Inventory table */}
-          <InventoryTable category={activeCategory} searchTerm={searchTerm} />
+          <InventoryTable 
+            category={activeCategory} 
+            searchTerm={searchTerm} 
+            onInventoryUpdated={refreshInventoryStats}
+          />
+          
+          {/* Add Item Dialog */}
+          <AddInventoryItemDialog
+            open={isAddDialogOpen}
+            onOpenChange={setIsAddDialogOpen}
+            onItemsAdded={handleItemsAdded}
+          />
         </div>
       </main>
     </div>
