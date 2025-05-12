@@ -1,3 +1,4 @@
+
 import type { Config } from "tailwindcss";
 
 export default {
@@ -61,7 +62,14 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+                chickey: {
+                    primary: '#F97316', // Orange
+                    secondary: '#FBBF24', // Yellow
+                    accent: '#FEF7CD', // Soft Yellow
+                    dark: '#1F2937', // Dark Gray
+                    light: '#F9FAFB', // Light Gray
+                }
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
