@@ -20,7 +20,7 @@ export const menuItems: MenuItem[] = [
     id: 'burger-classic',
     name: 'Classic Chicken Burger',
     description: 'Juicy chicken patty with lettuce, mayo and cheese',
-    price: 6.99,
+    price: 199.99,
     category: 'main',
     ingredients: [
       { id: 'chicken-patty', name: 'Chicken Patty', quantity: 1 },
@@ -33,7 +33,7 @@ export const menuItems: MenuItem[] = [
     id: 'burger-spicy',
     name: 'Spicy Chicken Burger',
     description: 'Spicy chicken patty with jalapenos and hot sauce',
-    price: 7.99,
+    price: 249.99,
     category: 'main',
     ingredients: [
       { id: 'chicken-patty', name: 'Chicken Patty', quantity: 1 },
@@ -46,7 +46,7 @@ export const menuItems: MenuItem[] = [
     id: 'chicken-sandwich',
     name: 'Chicken Sandwich',
     description: 'Grilled chicken with fresh veggies on bread',
-    price: 5.99,
+    price: 179.99,
     category: 'main',
     ingredients: [
       { id: 'chicken-patty', name: 'Chicken Patty', quantity: 1 },
@@ -59,7 +59,7 @@ export const menuItems: MenuItem[] = [
     id: 'chicken-popcorn',
     name: 'Chicken Popcorn',
     description: 'Crispy bite-sized chicken pieces',
-    price: 4.99,
+    price: 149.99,
     category: 'side',
     ingredients: [
       { id: 'chicken-popcorn', name: 'Chicken Popcorn', quantity: 10 },
@@ -70,7 +70,7 @@ export const menuItems: MenuItem[] = [
     id: 'french-fries',
     name: 'French Fries',
     description: 'Crispy, golden french fries',
-    price: 2.99,
+    price: 99.99,
     category: 'side',
     ingredients: [
       { id: 'french-fries', name: 'French Fries', quantity: 1 }
@@ -80,7 +80,7 @@ export const menuItems: MenuItem[] = [
     id: 'veg-burger',
     name: 'Veggie Burger',
     description: 'Plant-based patty with fresh vegetables',
-    price: 6.49,
+    price: 189.99,
     category: 'main',
     ingredients: [
       { id: 'veg-burger-patty', name: 'Veg Burger Patty', quantity: 1 },
@@ -94,7 +94,7 @@ export const menuItems: MenuItem[] = [
     id: 'soda',
     name: 'Soda',
     description: 'Refreshing carbonated drink',
-    price: 1.99,
+    price: 49.99,
     category: 'drink',
     ingredients: []
   },
@@ -102,7 +102,7 @@ export const menuItems: MenuItem[] = [
     id: 'ice-cream',
     name: 'Ice Cream',
     description: 'Creamy vanilla ice cream',
-    price: 2.99,
+    price: 79.99,
     category: 'dessert',
     ingredients: []
   }

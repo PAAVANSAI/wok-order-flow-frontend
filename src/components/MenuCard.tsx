@@ -20,7 +20,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
         <CardDescription className="text-sm text-gray-500">{item.description}</CardDescription>
       </CardHeader>
       <CardContent className="flex-grow">
-        <p className="font-semibold text-chickey-primary text-lg">${item.price.toFixed(2)}</p>
+        <p className="font-semibold text-chickey-primary text-lg">₹{item.price.toFixed(2)}</p>
         <div className="mt-2 text-xs text-gray-500">
           <p>Contains: {item.ingredients.map(i => i.name).join(', ')}</p>
         </div>

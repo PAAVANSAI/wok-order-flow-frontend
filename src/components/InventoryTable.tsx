@@ -6,11 +6,23 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
-import { Plus, Minus, Package, Save } from 'lucide-react';
+import { Plus, Minus, Save } from 'lucide-react';
 
-const InventoryTable: React.FC = () => {
+interface InventoryTableProps {
+  category: string;
+  searchTerm: string;
+}
+
+const InventoryTable: React.FC<InventoryTableProps> = ({ category, searchTerm }) => {
   const { inventoryItems, updateInventoryItem } = useApp();
   const [updatedValues, setUpdatedValues] = useState<Record<string, number>>({});
+
+  const filteredItems = inventoryItems
+    .filter(item => {
+      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = category === 'all' || item.category === category;
+      return matchesSearch && matchesCategory;
+    });
   
   const handleUpdateQuantity = (id: string, amount: number) => {
     const currentItem = inventoryItems.find(item => item.id === id);
@@ -63,61 +75,69 @@ const InventoryTable: React.FC = () => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {inventoryItems.map((item) => {
-            const isUpdating = updatedValues[item.id] !== undefined;
-            const displayQuantity = isUpdating ? updatedValues[item.id] : item.quantity;
-            
-            return (
-              <TableRow key={item.id}>
-                <TableCell className="font-medium">{item.name}</TableCell>
-                <TableCell className="capitalize">{item.category}</TableCell>
-                <TableCell className="font-semibold">
-                  <div className={`transition-colors ${isUpdating ? 'text-chickey-primary' : ''}`}>
-                    {displayQuantity}
-                  </div>
-                </TableCell>
-                <TableCell>{item.unit}</TableCell>
-                <TableCell>{getLevelIndicator(item)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7" 
-                      onClick={() => handleUpdateQuantity(item.id, -1)}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    
-                    <Input
-                      value={displayQuantity}
-                      onChange={(e) => handleDirectInput(item.id, e.target.value)}
-                      className="w-16 h-7 text-center"
-                    />
-                    
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7" 
-                      onClick={() => handleUpdateQuantity(item.id, 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    
-                    {isUpdating && (
+          {filteredItems.length > 0 ? (
+            filteredItems.map((item) => {
+              const isUpdating = updatedValues[item.id] !== undefined;
+              const displayQuantity = isUpdating ? updatedValues[item.id] : item.quantity;
+              
+              return (
+                <TableRow key={item.id}>
+                  <TableCell className="font-medium">{item.name}</TableCell>
+                  <TableCell className="capitalize">{item.category}</TableCell>
+                  <TableCell className="font-semibold">
+                    <div className={`transition-colors ${isUpdating ? 'text-chickey-primary' : ''}`}>
+                      {displayQuantity}
+                    </div>
+                  </TableCell>
+                  <TableCell>{item.unit}</TableCell>
+                  <TableCell>{getLevelIndicator(item)}</TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
                       <Button 
+                        variant="outline" 
                         size="icon" 
-                        className="h-7 w-7 bg-chickey-primary hover:bg-chickey-primary/90 text-white" 
-                        onClick={() => saveUpdatedQuantity(item.id)}
+                        className="h-7 w-7" 
+                        onClick={() => handleUpdateQuantity(item.id, -1)}
                       >
-                        <Save className="h-3 w-3" />
+                        <Minus className="h-3 w-3" />
                       </Button>
-                    )}
-                  </div>
-                </TableCell>
-              </TableRow>
-            );
-          })}
+                      
+                      <Input
+                        value={displayQuantity}
+                        onChange={(e) => handleDirectInput(item.id, e.target.value)}
+                        className="w-16 h-7 text-center"
+                      />
+                      
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7" 
+                        onClick={() => handleUpdateQuantity(item.id, 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      
+                      {isUpdating && (
+                        <Button 
+                          size="icon" 
+                          className="h-7 w-7 bg-chickey-primary hover:bg-chickey-primary/90 text-white" 
+                          onClick={() => saveUpdatedQuantity(item.id)}
+                        >
+                          <Save className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })
+          ) : (
+            <TableRow>
+              <TableCell colSpan={6} className="h-24 text-center">
+                No inventory items found matching your criteria.
+              </TableCell>
+            </TableRow>
+          )}
         </TableBody>
       </Table>
     </Card>

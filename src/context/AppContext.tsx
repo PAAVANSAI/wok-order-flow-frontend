@@ -1,10 +1,22 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
 import { menuItems as initialMenuItems } from '../data/menuItems';
 import { inventoryItems as initialInventoryItems } from '../data/inventoryItems';
 import { toast } from '@/components/ui/use-toast';
+
+// Define the Order type for tracking daily orders
+interface Order {
+  id: string;
+  items: {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+  }[];
+  total: number;
+  timestamp: number;
+}
 
 interface CartItem extends MenuItem {
   quantity: number;
@@ -31,6 +43,10 @@ interface AppContextType {
   // Stats
   totalOrders: number;
   totalRevenue: number;
+
+  // Daily order tracking
+  orders: Order[];
+  getOrdersByDate: (date: Date) => Order[];
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -57,6 +73,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const saved = localStorage.getItem('chickey-total-revenue');
     return saved ? parseFloat(saved) : 0;
   });
+
+  // Initialize orders state
+  const [orders, setOrders] = useState<Order[]>(() => {
+    const savedOrders = localStorage.getItem('chickey-orders');
+    return savedOrders ? JSON.parse(savedOrders) : [];
+  });
   
   // Persist state to localStorage
   useEffect(() => {
@@ -74,6 +96,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     localStorage.setItem('chickey-total-revenue', totalRevenue.toString());
   }, [totalRevenue]);
+
+  // Persist orders to localStorage
+  useEffect(() => {
+    localStorage.setItem('chickey-orders', JSON.stringify(orders));
+  }, [orders]);
 
   // Cart functions
   const addToCart = (item: MenuItem) => {
@@ -174,15 +201,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       });
     });
     
+    // Create a new order record
+    const newOrder: Order = {
+      id: `order-${Date.now()}`,
+      items: cartItems.map(item => ({
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      })),
+      total: orderTotal,
+      timestamp: Date.now()
+    };
+    
     // Update state
     setInventoryItems(newInventoryItems);
     setTotalOrders(prev => prev + 1);
     setTotalRevenue(prev => prev + orderTotal);
+    setOrders(prevOrders => [...prevOrders, newOrder]);
     clearCart();
     
     toast({
       title: "Order placed successfully",
-      description: `Total: $${orderTotal.toFixed(2)}`,
+      description: `Total: ₹${orderTotal.toFixed(2)}`,
     });
     
     return true;
@@ -211,6 +252,20 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     });
   };
 
+  // Get orders by date
+  const getOrdersByDate = (date: Date): Order[] => {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    return orders.filter(order => {
+      const orderDate = new Date(order.timestamp);
+      return orderDate >= startOfDay && orderDate <= endOfDay;
+    });
+  };
+
   const value = {
     menuItems,
     cartItems,
@@ -223,6 +278,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     processOrder,
     totalOrders,
     totalRevenue,
+    orders,
+    getOrdersByDate,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

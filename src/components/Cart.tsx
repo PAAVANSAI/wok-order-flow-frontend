@@ -39,7 +39,7 @@ const Cart: React.FC = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="font-medium">{item.name}</h3>
-                  <p className="text-sm text-muted-foreground">${item.price.toFixed(2)}</p>
+                  <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <Button 
@@ -71,7 +71,7 @@ const Cart: React.FC = () => {
               </div>
               <div className="flex justify-between mt-1 text-sm">
                 <span>Subtotal</span>
-                <span>${(item.price * item.quantity).toFixed(2)}</span>
+                <span>₹{(item.price * item.quantity).toFixed(2)}</span>
               </div>
               <Separator className="my-2" />
             </div>
@@ -81,7 +81,7 @@ const Cart: React.FC = () => {
       <CardFooter className="flex flex-col pt-2 border-t">
         <div className="flex justify-between w-full py-2">
           <span className="font-semibold">Total Amount</span>
-          <span className="font-bold text-chickey-primary">${totalAmount.toFixed(2)}</span>
+          <span className="font-bold text-chickey-primary">₹{totalAmount.toFixed(2)}</span>
         </div>
         <Button 
           onClick={processOrder} 

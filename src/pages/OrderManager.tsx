@@ -5,11 +5,13 @@ import NavBar from '@/components/NavBar';
 import Header from '@/components/Header';
 import MenuCard from '@/components/MenuCard';
 import Cart from '@/components/Cart';
+import OrderHistory from '@/components/OrderHistory';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const OrderManager = () => {
   const { menuItems } = useApp();
   const [activeCategory, setActiveCategory] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('menu');
   
   const categories = [
     { id: 'all', name: 'All Items' },
@@ -31,32 +33,47 @@ const OrderManager = () => {
       <main className="flex-grow container py-6">
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="col-span-2">
-            <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
+            <Tabs defaultValue="menu" value={activeTab} onValueChange={setActiveTab}>
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-bold">Menu</h2>
                 <TabsList>
-                  {categories.map(category => (
-                    <TabsTrigger key={category.id} value={category.id}>
-                      {category.name}
-                    </TabsTrigger>
-                  ))}
+                  <TabsTrigger value="menu">Menu</TabsTrigger>
+                  <TabsTrigger value="history">Order History</TabsTrigger>
                 </TabsList>
               </div>
               
-              {categories.map(category => (
-                <TabsContent key={category.id} value={category.id} className="mt-0">
-                  <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {filteredItems.map(item => (
-                      <MenuCard key={item.id} item={item} />
-                    ))}
+              <TabsContent value="menu">
+                <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-xl font-bold">Menu</h2>
+                    <TabsList>
+                      {categories.map(category => (
+                        <TabsTrigger key={category.id} value={category.id}>
+                          {category.name}
+                        </TabsTrigger>
+                      ))}
+                    </TabsList>
                   </div>
-                  {filteredItems.length === 0 && (
-                    <div className="text-center p-12">
-                      <p className="text-muted-foreground">No items in this category</p>
-                    </div>
-                  )}
-                </TabsContent>
-              ))}
+                  
+                  {categories.map(category => (
+                    <TabsContent key={category.id} value={category.id} className="mt-0">
+                      <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+                        {filteredItems.map(item => (
+                          <MenuCard key={item.id} item={item} />
+                        ))}
+                      </div>
+                      {filteredItems.length === 0 && (
+                        <div className="text-center p-12">
+                          <p className="text-muted-foreground">No items in this category</p>
+                        </div>
+                      )}
+                    </TabsContent>
+                  ))}
+                </Tabs>
+              </TabsContent>
+              
+              <TabsContent value="history" className="mt-0">
+                <OrderHistory />
+              </TabsContent>
             </Tabs>
           </div>
           

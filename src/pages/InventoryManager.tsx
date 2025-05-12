@@ -5,13 +5,12 @@ import NavBar from '@/components/NavBar';
 import Header from '@/components/Header';
 import InventoryTable from '@/components/InventoryTable';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, Filter } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 const InventoryManager = () => {
-  const { inventoryItems, totalOrders } = useApp();
+  const { inventoryItems, totalOrders, totalRevenue } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
 
@@ -27,13 +26,6 @@ const InventoryManager = () => {
   
   const lowStockItems = inventoryItems.filter(item => item.quantity <= item.minLevel);
   
-  const filteredItems = inventoryItems
-    .filter(item => {
-      const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = activeCategory === 'all' || item.category === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
-  
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <NavBar />
@@ -42,7 +34,7 @@ const InventoryManager = () => {
       <main className="flex-grow container py-6">
         <div className="flex flex-col gap-6">
           {/* Dashboard stats */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Total Items</CardTitle>
@@ -67,6 +59,15 @@ const InventoryManager = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold text-chickey-primary">{totalOrders}</p>
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg">Total Revenue</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-3xl font-bold text-chickey-primary">₹{totalRevenue.toFixed(2)}</p>
               </CardContent>
             </Card>
           </div>
@@ -98,7 +99,7 @@ const InventoryManager = () => {
           </div>
           
           {/* Inventory table */}
-          <InventoryTable />
+          <InventoryTable category={activeCategory} searchTerm={searchTerm} />
         </div>
       </main>
     </div>
