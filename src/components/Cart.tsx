@@ -14,14 +14,22 @@ const Cart: React.FC = () => {
 
   if (cartItems.length === 0) {
     return (
-      <Card>
+      <Card className="h-full flex flex-col">
         <CardHeader>
           <CardTitle>Your Order</CardTitle>
           <CardDescription>Your cart is empty</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex-grow">
           <p className="text-center text-muted-foreground py-8">Add items from the menu to get started</p>
         </CardContent>
+        <CardFooter className="border-t pt-4">
+          <Button 
+            disabled
+            className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white opacity-50 cursor-not-allowed"
+          >
+            Place Order
+          </Button>
+        </CardFooter>
       </Card>
     );
   }
@@ -32,7 +40,7 @@ const Cart: React.FC = () => {
         <CardTitle>Your Order</CardTitle>
         <CardDescription>{cartItems.length} items in your cart</CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow overflow-hidden">
+      <CardContent className="flex-grow overflow-hidden pb-0">
         <ScrollArea className="h-[calc(100vh-350px)] pr-4">
           {cartItems.map((item) => (
             <div key={item.id} className="mb-4">
@@ -78,7 +86,7 @@ const Cart: React.FC = () => {
           ))}
         </ScrollArea>
       </CardContent>
-      <CardFooter className="flex flex-col pt-2 border-t">
+      <CardFooter className="flex flex-col mt-auto pt-4 border-t">
         <div className="flex justify-between w-full py-2">
           <span className="font-semibold">Total Amount</span>
           <span className="font-bold text-chickey-primary">₹{totalAmount.toFixed(2)}</span>

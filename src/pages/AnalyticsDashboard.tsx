@@ -10,6 +10,10 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { format, subMonths, isWithinInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
+import { ChevronDown } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DateRange, FilterPeriod, formatDate, formatDisplayDate, getMonthRange, getYearRange, isDateInRange } from '@/utils/dateUtils';
 
 interface InventoryUsage {
   id: string;
@@ -26,106 +30,186 @@ interface OrderStats {
   revenue: number;
 }
 
+interface TopSellingItem {
+  name: string;
+  quantity: number;
+}
+
 const AnalyticsDashboard = () => {
   const [inventoryUsage, setInventoryUsage] = useState<InventoryUsage[]>([]);
   const [orderStats, setOrderStats] = useState<OrderStats[]>([]);
-  const [topSellingItems, setTopSellingItems] = useState<{name: string, quantity: number}[]>([]);
+  const [topSellingItems, setTopSellingItems] = useState<TopSellingItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
+  const [filterPeriod, setFilterPeriod] = useState<FilterPeriod>('month');
+  const [currentDateRange, setCurrentDateRange] = useState<DateRange>(getMonthRange(new Date()));
+  
+  // Generate list of months for dropdown
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const date = new Date();
+    date.setMonth(i);
+    return { 
+      value: i, 
+      label: format(date, 'MMMM')
+    };
+  });
+
+  // Generate list of years (current year and 5 years back)
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: 6 }, (_, i) => {
+    const year = currentYear - i;
+    return { value: year, label: year.toString() };
+  });
+  
+  // Change filter period (month, year, all)
+  const handlePeriodChange = (period: FilterPeriod) => {
+    setFilterPeriod(period);
+    
+    if (period === 'month') {
+      setCurrentDateRange(getMonthRange(selectedMonth));
+    } else if (period === 'year') {
+      const yearDate = new Date();
+      yearDate.setFullYear(selectedYear);
+      setCurrentDateRange(getYearRange(yearDate));
+    } else {
+      // 'all' period - set a very wide range
+      setCurrentDateRange({
+        start: new Date(2000, 0, 1),
+        end: new Date(2100, 11, 31)
+      });
+    }
+  };
+  
+  // Handle month change
+  const handleMonthChange = (value: string) => {
+    const month = parseInt(value, 10);
+    const newDate = new Date();
+    newDate.setMonth(month);
+    setSelectedMonth(newDate);
+    
+    if (filterPeriod === 'month') {
+      setCurrentDateRange(getMonthRange(newDate));
+    }
+  };
+  
+  // Handle year change
+  const handleYearChange = (value: string) => {
+    const year = parseInt(value, 10);
+    setSelectedYear(year);
+    
+    if (filterPeriod === 'year') {
+      const yearDate = new Date();
+      yearDate.setFullYear(year);
+      setCurrentDateRange(getYearRange(yearDate));
+    }
+  };
   
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Get the date range for the past month
-        const today = new Date();
-        const oneMonthAgo = subMonths(today, 1);
-        
-        // Fetch order data for the past month
-        const { data: ordersData, error: ordersError } = await supabase
-          .from('orders')
-          .select('*')
-          .gte('timestamp', oneMonthAgo.toISOString());
-          
-        if (ordersError) throw ordersError;
-        
-        // Fetch inventory data
-        const { data: inventoryData, error: inventoryError } = await supabase
-          .from('inventory_items')
-          .select('*');
-          
-        if (inventoryError) throw inventoryError;
-
-        // Fetch order items data for the past month
-        const { data: orderItemsData, error: orderItemsError } = await supabase
-          .from('order_items')
-          .select('*, orders!inner(*)')
-          .gte('orders.timestamp', oneMonthAgo.toISOString());
-          
-        if (orderItemsError) throw orderItemsError;
-        
-        // Process order stats by day
-        const orderByDay = new Map<string, {orders: number, revenue: number}>();
-        
-        ordersData.forEach(order => {
-          const date = format(new Date(order.timestamp), 'yyyy-MM-dd');
-          const existing = orderByDay.get(date) || {orders: 0, revenue: 0};
-          
-          orderByDay.set(date, {
-            orders: existing.orders + 1,
-            revenue: existing.revenue + parseFloat(order.total.toString())
-          });
-        });
-        
-        const orderStatsArray = Array.from(orderByDay.entries()).map(([date, stats]) => ({
-          date,
-          orders: stats.orders,
-          revenue: stats.revenue
-        }));
-        
-        // Process top selling items
-        const itemSales = new Map<string, number>();
-        
-        orderItemsData.forEach(item => {
-          const existing = itemSales.get(item.name) || 0;
-          itemSales.set(item.name, existing + item.quantity);
-        });
-        
-        const topItems = Array.from(itemSales.entries())
-          .map(([name, quantity]) => ({name, quantity}))
-          .sort((a, b) => b.quantity - a.quantity)
-          .slice(0, 5);
-        
-        // Set the processed data
-        setOrderStats(orderStatsArray);
-        setTopSellingItems(topItems);
-        
-        // For inventory usage, we're estimating based on current levels vs estimated starting levels
-        // In a real system, you would track historical inventory changes
-        setInventoryUsage(
-          inventoryData.map(item => ({
-            id: item.id,
-            name: item.name,
-            initialQuantity: item.quantity + 20, // Placeholder - in a real system this would be from history
-            currentQuantity: item.quantity,
-            usage: 20, // Placeholder calculated usage
-            unit: item.unit
-          }))
-        );
-      } catch (error) {
-        console.error('Error fetching analytics data:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load analytics data.',
-          variant: 'destructive'
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    
     fetchData();
-  }, []);
+  }, [currentDateRange]);
+  
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Format date range for Supabase queries
+      const startDate = format(currentDateRange.start, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+      const endDate = format(currentDateRange.end, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
+      
+      // Fetch order data for the selected period
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('*')
+        .gte('timestamp', startDate)
+        .lte('timestamp', endDate);
+        
+      if (ordersError) throw ordersError;
+      
+      // Fetch inventory data
+      const { data: inventoryData, error: inventoryError } = await supabase
+        .from('inventory_items')
+        .select('*');
+        
+      if (inventoryError) throw inventoryError;
+
+      // Fetch order items data for the selected period
+      const { data: orderItemsData, error: orderItemsError } = await supabase
+        .from('order_items')
+        .select('*, orders!inner(*)')
+        .gte('orders.timestamp', startDate)
+        .lte('orders.timestamp', endDate);
+        
+      if (orderItemsError) throw orderItemsError;
+      
+      // Process order stats by day
+      const orderByDay = new Map<string, {orders: number, revenue: number}>();
+      
+      ordersData.forEach(order => {
+        const date = formatDate(new Date(order.timestamp));
+        const existing = orderByDay.get(date) || {orders: 0, revenue: 0};
+        
+        orderByDay.set(date, {
+          orders: existing.orders + 1,
+          revenue: existing.revenue + parseFloat(order.total.toString())
+        });
+      });
+      
+      const orderStatsArray = Array.from(orderByDay.entries()).map(([date, stats]) => ({
+        date,
+        orders: stats.orders,
+        revenue: stats.revenue
+      }));
+      
+      // Process top selling items
+      const itemSales = new Map<string, number>();
+      
+      orderItemsData.forEach(item => {
+        const existing = itemSales.get(item.name) || 0;
+        itemSales.set(item.name, existing + item.quantity);
+      });
+      
+      const topItems = Array.from(itemSales.entries())
+        .map(([name, quantity]) => ({name, quantity}))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5);
+      
+      // Set the processed data
+      setOrderStats(orderStatsArray);
+      setTopSellingItems(topItems);
+      
+      // For inventory usage, we're estimating based on current levels vs estimated starting levels
+      setInventoryUsage(
+        inventoryData.map(item => ({
+          id: item.id,
+          name: item.name,
+          initialQuantity: item.quantity + 20, // Placeholder - in a real system this would be from history
+          currentQuantity: item.quantity,
+          usage: 20, // Placeholder calculated usage
+          unit: item.unit
+        }))
+      );
+    } catch (error) {
+      console.error('Error fetching analytics data:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load analytics data.',
+        variant: 'destructive'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // For period display text
+  const getPeriodDisplayText = () => {
+    if (filterPeriod === 'month') {
+      return format(selectedMonth, 'MMMM yyyy');
+    } else if (filterPeriod === 'year') {
+      return selectedYear.toString();
+    }
+    return 'All Time';
+  };
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
@@ -133,13 +217,63 @@ const AnalyticsDashboard = () => {
       <Header title="Owner Dashboard" />
       
       <main className="flex-grow container py-6">
-        <h1 className="text-2xl font-bold mb-6">Past Month Analytics</h1>
+        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
+          <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
+          
+          <div className="flex flex-wrap items-center gap-2">
+            <Tabs 
+              value={filterPeriod} 
+              onValueChange={(value) => handlePeriodChange(value as FilterPeriod)}
+              className="w-full md:w-auto"
+            >
+              <TabsList>
+                <TabsTrigger value="month">Monthly</TabsTrigger>
+                <TabsTrigger value="year">Yearly</TabsTrigger>
+                <TabsTrigger value="all">All Time</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            
+            {filterPeriod === 'month' && (
+              <Select value={selectedMonth.getMonth().toString()} onValueChange={handleMonthChange}>
+                <SelectTrigger className="w-[150px]">
+                  <SelectValue placeholder="Select month" />
+                </SelectTrigger>
+                <SelectContent>
+                  {months.map((month) => (
+                    <SelectItem key={month.value} value={month.value.toString()}>
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            
+            {(filterPeriod === 'month' || filterPeriod === 'year') && (
+              <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
+                <SelectTrigger className="w-[100px]">
+                  <SelectValue placeholder="Year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {years.map((year) => (
+                    <SelectItem key={year.value} value={year.value.toString()}>
+                      {year.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
+        </div>
+        
+        <div className="mb-4">
+          <h2 className="text-lg font-medium">Showing data for: {getPeriodDisplayText()}</h2>
+        </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Total Orders</CardTitle>
-              <CardDescription>Past 30 days</CardDescription>
+              <CardDescription>Current period</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-chickey-primary">
@@ -151,7 +285,7 @@ const AnalyticsDashboard = () => {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Total Revenue</CardTitle>
-              <CardDescription>Past 30 days</CardDescription>
+              <CardDescription>Current period</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-3xl font-bold text-chickey-secondary">
@@ -184,12 +318,16 @@ const AnalyticsDashboard = () => {
               <Card className="col-span-1 lg:col-span-2">
                 <CardHeader>
                   <CardTitle>Daily Orders & Revenue</CardTitle>
-                  <CardDescription>Past 30 days performance</CardDescription>
+                  <CardDescription>Performance for {getPeriodDisplayText()}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {loading ? (
                     <div className="h-80 flex items-center justify-center">
                       <p>Loading chart data...</p>
+                    </div>
+                  ) : orderStats.length === 0 ? (
+                    <div className="h-80 flex items-center justify-center">
+                      <p>No order data available for the selected period</p>
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height={400}>
@@ -226,6 +364,10 @@ const AnalyticsDashboard = () => {
                     <div className="h-60 flex items-center justify-center">
                       <p>Loading data...</p>
                     </div>
+                  ) : topSellingItems.length === 0 ? (
+                    <div className="h-60 flex items-center justify-center">
+                      <p>No sales data available for the selected period</p>
+                    </div>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -235,18 +377,12 @@ const AnalyticsDashboard = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {topSellingItems.length > 0 ? (
-                          topSellingItems.map(item => (
-                            <TableRow key={item.name}>
-                              <TableCell>{item.name}</TableCell>
-                              <TableCell className="text-right">{item.quantity}</TableCell>
-                            </TableRow>
-                          ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={2} className="text-center">No data available</TableCell>
+                        {topSellingItems.map(item => (
+                          <TableRow key={item.name}>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell className="text-right">{item.quantity}</TableCell>
                           </TableRow>
-                        )}
+                        ))}
                       </TableBody>
                     </Table>
                   )}
@@ -263,6 +399,10 @@ const AnalyticsDashboard = () => {
                     <div className="h-60 flex items-center justify-center">
                       <p>Loading data...</p>
                     </div>
+                  ) : orderStats.length === 0 ? (
+                    <div className="h-60 flex items-center justify-center">
+                      <p>No order data available for the selected period</p>
+                    </div>
                   ) : (
                     <Table>
                       <TableHeader>
@@ -273,22 +413,16 @@ const AnalyticsDashboard = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {orderStats.length > 0 ? (
-                          orderStats
-                            .sort((a, b) => b.date.localeCompare(a.date))
-                            .slice(0, 10)
-                            .map(day => (
-                              <TableRow key={day.date}>
-                                <TableCell>{format(new Date(day.date), 'dd MMM yyyy')}</TableCell>
-                                <TableCell className="text-right">{day.orders}</TableCell>
-                                <TableCell className="text-right">₹{day.revenue.toFixed(2)}</TableCell>
-                              </TableRow>
-                            ))
-                        ) : (
-                          <TableRow>
-                            <TableCell colSpan={3} className="text-center">No data available</TableCell>
-                          </TableRow>
-                        )}
+                        {orderStats
+                          .sort((a, b) => b.date.localeCompare(a.date))
+                          .slice(0, 10)
+                          .map(day => (
+                            <TableRow key={day.date}>
+                              <TableCell>{formatDisplayDate(day.date)}</TableCell>
+                              <TableCell className="text-right">{day.orders}</TableCell>
+                              <TableCell className="text-right">₹{day.revenue.toFixed(2)}</TableCell>
+                            </TableRow>
+                          ))}
                       </TableBody>
                     </Table>
                   )}
@@ -301,7 +435,7 @@ const AnalyticsDashboard = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Inventory Usage Analysis</CardTitle>
-                <CardDescription>Past 30 days consumption</CardDescription>
+                <CardDescription>Current period consumption</CardDescription>
               </CardHeader>
               <CardContent>
                 {loading ? (
