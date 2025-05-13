@@ -4,48 +4,14 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Minus, Plus, TrashIcon, AlertCircle } from 'lucide-react';
+import { Minus, Plus, TrashIcon } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
-import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const Cart: React.FC = () => {
-  const { cartItems, removeFromCart, updateCartItemQuantity, processOrder, inventoryItems } = useApp();
+  const { cartItems, removeFromCart, updateCartItemQuantity, processOrder } = useApp();
   
   const totalAmount = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
-  // Check if the current cart can be processed based on inventory
-  const checkInventoryStatus = () => {
-    const requiredIngredients: Record<string, number> = {};
-    let insufficientItems: string[] = [];
-    
-    // Calculate required ingredients for the cart
-    cartItems.forEach(cartItem => {
-      cartItem.ingredients.forEach(ingredient => {
-        const ingredientId = ingredient.id;
-        const requiredAmount = ingredient.quantity * cartItem.quantity;
-        
-        requiredIngredients[ingredientId] = (requiredIngredients[ingredientId] || 0) + requiredAmount;
-      });
-    });
-    
-    // Check if inventory is sufficient
-    Object.entries(requiredIngredients).forEach(([ingredientId, requiredAmount]) => {
-      const inventoryItem = inventoryItems.find(item => item.id === ingredientId);
-      if (!inventoryItem || inventoryItem.quantity < requiredAmount) {
-        const itemName = inventoryItem ? inventoryItem.name : 'Unknown ingredient';
-        insufficientItems.push(`${itemName} (Need: ${requiredAmount}${inventoryItem ? `, Have: ${inventoryItem.quantity}${inventoryItem.unit}` : ''})`);
-      }
-    });
-    
-    return {
-      canProcess: insufficientItems.length === 0,
-      insufficientItems
-    };
-  };
-  
-  const inventoryStatus = checkInventoryStatus();
-  
   if (cartItems.length === 0) {
     return (
       <Card>
@@ -118,28 +84,9 @@ const Cart: React.FC = () => {
           <span className="font-bold text-chickey-primary">₹{totalAmount.toFixed(2)}</span>
         </div>
         
-        {!inventoryStatus.canProcess && (
-          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md flex flex-col gap-2">
-            <div className="flex items-center gap-2">
-              <AlertCircle size={16} className="text-red-500" />
-              <div className="text-xs text-red-500">
-                Insufficient inventory for order
-              </div>
-            </div>
-            <div className="text-xs text-red-500 pl-6">
-              <ul className="list-disc">
-                {inventoryStatus.insufficientItems.map((item, index) => (
-                  <li key={index}>{item}</li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        )}
-        
         <Button 
           onClick={processOrder} 
           className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white"
-          disabled={!inventoryStatus.canProcess}
         >
           Place Order
         </Button>

@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
@@ -144,66 +145,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCartItems([]);
   };
 
-  // Check if enough inventory for an order
-  const canProcessOrder = (): boolean => {
-    // Create a map of required ingredients for the entire order
-    const requiredIngredients: Record<string, number> = {};
-    
-    // Calculate required ingredients for the order
-    cartItems.forEach(cartItem => {
-      cartItem.ingredients.forEach(ingredient => {
-        const ingredientId = ingredient.id;
-        const requiredAmount = ingredient.quantity * cartItem.quantity;
-        
-        requiredIngredients[ingredientId] = (requiredIngredients[ingredientId] || 0) + requiredAmount;
-      });
-    });
-    
-    // Synchronously check if local inventory is sufficient
-    for (const [ingredientId, requiredAmount] of Object.entries(requiredIngredients)) {
-      const inventoryItem = inventoryItems.find(item => item.id === ingredientId);
-      if (!inventoryItem || inventoryItem.quantity < requiredAmount) {
-        console.log(`Insufficient inventory for ingredient ${ingredientId}: Required ${requiredAmount}, Available ${inventoryItem?.quantity || 0}`);
-        return false;
-      }
-    }
-    
-    return true;
-  };
-
-  // Process an order
+  // Process an order - bypassing inventory checks
   const processOrder = (): boolean => {
-    if (!canProcessOrder()) {
-      toast({
-        title: "Insufficient inventory",
-        description: "There's not enough inventory to process this order",
-        variant: "destructive"
-      });
-      return false;
-    }
-    
     // Calculate order total
     const orderTotal = cartItems.reduce(
       (total, item) => total + item.price * item.quantity, 0
     );
-    
-    // Update inventory
-    const newInventoryItems = [...inventoryItems];
-    
-    cartItems.forEach(cartItem => {
-      cartItem.ingredients.forEach(ingredient => {
-        const ingredientId = ingredient.id;
-        const requiredAmount = ingredient.quantity * cartItem.quantity;
-        
-        const inventoryItemIndex = newInventoryItems.findIndex(item => item.id === ingredientId);
-        if (inventoryItemIndex !== -1) {
-          newInventoryItems[inventoryItemIndex] = {
-            ...newInventoryItems[inventoryItemIndex],
-            quantity: newInventoryItems[inventoryItemIndex].quantity - requiredAmount
-          };
-        }
-      });
-    });
     
     // Create a new order record
     const newOrder: Order = {
@@ -249,15 +196,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           
         if (itemsError) throw itemsError;
         
-        // Update inventory in Supabase
-        for (const item of newInventoryItems) {
-          const { error: inventoryError } = await supabase
-            .from('inventory_items')
-            .update({ quantity: item.quantity })
-            .eq('id', item.id);
-            
-          if (inventoryError) throw inventoryError;
-        }
       } catch (error) {
         console.error('Error saving order to Supabase:', error);
         toast({
@@ -269,7 +207,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
     
     // Update state
-    setInventoryItems(newInventoryItems);
     setTotalOrders(prev => prev + 1);
     setTotalRevenue(prev => prev + orderTotal);
     setOrders(prevOrders => [...prevOrders, newOrder]);
