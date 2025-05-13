@@ -149,32 +149,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Create a map of required ingredients for the entire order
     const requiredIngredients: Record<string, number> = {};
     
-    // First fetch the latest inventory data from Supabase to ensure we're working with current data
-    const fetchLatestInventory = async (): Promise<InventoryItem[]> => {
-      try {
-        const { data, error } = await supabase
-          .from('inventory_items')
-          .select('*');
-        
-        if (error) {
-          console.error('Error fetching inventory:', error);
-          return inventoryItems; // Fall back to local state if fetch fails
-        }
-        
-        return data.map(item => ({
-          id: item.id,
-          name: item.name,
-          quantity: item.quantity,
-          unit: item.unit,
-          minLevel: item.min_level,
-          category: item.category as 'meat' | 'bread' | 'vegetable' | 'dairy' | 'condiment' | 'other'
-        }));
-      } catch (error) {
-        console.error('Error in fetchLatestInventory:', error);
-        return inventoryItems;
-      }
-    };
-    
     // Calculate required ingredients for the order
     cartItems.forEach(cartItem => {
       cartItem.ingredients.forEach(ingredient => {

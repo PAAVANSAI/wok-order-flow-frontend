@@ -34,7 +34,7 @@ const Cart: React.FC = () => {
       const inventoryItem = inventoryItems.find(item => item.id === ingredientId);
       if (!inventoryItem || inventoryItem.quantity < requiredAmount) {
         const itemName = inventoryItem ? inventoryItem.name : 'Unknown ingredient';
-        insufficientItems.push(itemName);
+        insufficientItems.push(`${itemName} (Need: ${requiredAmount}${inventoryItem ? `, Have: ${inventoryItem.quantity}${inventoryItem.unit}` : ''})`);
       }
     });
     
@@ -119,23 +119,20 @@ const Cart: React.FC = () => {
         </div>
         
         {!inventoryStatus.canProcess && (
-          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md flex items-center gap-2">
-            <AlertCircle size={16} className="text-red-500" />
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <div className="text-xs text-red-500">
-                    Insufficient inventory for: 
-                    <Badge variant="outline" className="ml-2 text-red-500 border-red-200">
-                      {inventoryStatus.insufficientItems.length} items
-                    </Badge>
-                  </div>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Missing: {inventoryStatus.insufficientItems.join(', ')}</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+          <div className="mb-2 p-2 bg-red-50 border border-red-200 rounded-md flex flex-col gap-2">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-red-500" />
+              <div className="text-xs text-red-500">
+                Insufficient inventory for order
+              </div>
+            </div>
+            <div className="text-xs text-red-500 pl-6">
+              <ul className="list-disc">
+                {inventoryStatus.insufficientItems.map((item, index) => (
+                  <li key={index}>{item}</li>
+                ))}
+              </ul>
+            </div>
           </div>
         )}
         
