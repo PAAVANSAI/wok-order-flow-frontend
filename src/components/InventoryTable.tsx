@@ -60,6 +60,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       if (error) throw error;
       
       setInventoryItems(data || []);
+      
+      // Reset updatedValues when fetching new items
+      setUpdatedValues({});
     } catch (error) {
       console.error('Error fetching inventory items:', error);
       toast({
@@ -76,7 +79,8 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     const currentItem = inventoryItems.find(item => item.id === id);
     if (!currentItem) return;
     
-    const newQuantity = Math.max(0, currentItem.quantity + amount);
+    const currentValue = updatedValues[id] !== undefined ? updatedValues[id] : currentItem.quantity;
+    const newQuantity = Math.max(0, currentValue + amount);
     setUpdatedValues(prev => ({ ...prev, [id]: newQuantity }));
   };
 
@@ -192,7 +196,9 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                       <Input
                         value={displayQuantity}
                         onChange={(e) => handleDirectInput(item.id, e.target.value)}
-                        className="w-16 h-7 text-center"
+                        className="w-20 h-7 text-center"
+                        type="number"
+                        min="0"
                       />
                       
                       <Button 
