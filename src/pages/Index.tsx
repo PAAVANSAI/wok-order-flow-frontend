@@ -80,7 +80,7 @@ const Index = () => {
                 <CardTitle className="text-lg">Total Revenue</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-chickey-secondary">${totalRevenue.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-chickey-secondary">₹{totalRevenue.toFixed(2)}</p>
               </CardContent>
             </Card>
           </div>

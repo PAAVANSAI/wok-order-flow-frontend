@@ -10,6 +10,7 @@ import { AppProvider } from "@/context/AppContext";
 import Index from "./pages/Index";
 import OrderManager from "./pages/OrderManager";
 import InventoryManager from "./pages/InventoryManager";
+import AnalyticsDashboard from "./pages/AnalyticsDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +26,7 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/orders" element={<OrderManager />} />
             <Route path="/inventory" element={<InventoryManager />} />
+            <Route path="/analytics" element={<AnalyticsDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

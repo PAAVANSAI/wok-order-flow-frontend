@@ -2,7 +2,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
-import { ShoppingCart, Package } from 'lucide-react';
+import { ShoppingCart, Package, BarChart2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 const NavBar = () => {
@@ -47,6 +47,19 @@ const NavBar = () => {
             >
               <Package className="mr-2 h-4 w-4" />
               Inventory Management
+            </Link>
+            
+            <Link 
+              to="/analytics" 
+              className={cn(
+                "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                isActive('/analytics') 
+                  ? "bg-chickey-accent text-chickey-primary" 
+                  : "text-gray-700 hover:bg-gray-100"
+              )}
+            >
+              <BarChart2 className="mr-2 h-4 w-4" />
+              Owner Dashboard
             </Link>
           </div>
         </div>

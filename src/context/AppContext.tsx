@@ -1,9 +1,11 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
 import { menuItems as initialMenuItems } from '../data/menuItems';
 import { inventoryItems as initialInventoryItems } from '../data/inventoryItems';
 import { toast } from '@/components/ui/use-toast';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define the Order type for tracking daily orders
 interface Order {
@@ -25,6 +27,7 @@ interface CartItem extends MenuItem {
 interface AppContextType {
   // Menu state
   menuItems: MenuItem[];
+  setMenuItems: (items: MenuItem[]) => void;
   
   // Cart state
   cartItems: CartItem[];
@@ -214,12 +217,65 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now()
     };
     
+    // Insert order into Supabase
+    const addOrderToSupabase = async () => {
+      try {
+        // Insert order record
+        const { data: orderData, error: orderError } = await supabase
+          .from('orders')
+          .insert({
+            id: newOrder.id,
+            total: orderTotal,
+            timestamp: new Date(newOrder.timestamp).toISOString()
+          })
+          .select()
+          .single();
+          
+        if (orderError) throw orderError;
+        
+        // Insert order items
+        const orderItems = cartItems.map(item => ({
+          order_id: newOrder.id,
+          menu_item_id: item.id,
+          name: item.name,
+          price: item.price,
+          quantity: item.quantity
+        }));
+        
+        const { error: itemsError } = await supabase
+          .from('order_items')
+          .insert(orderItems);
+          
+        if (itemsError) throw itemsError;
+        
+        // Update inventory in Supabase
+        for (const item of newInventoryItems) {
+          const { error: inventoryError } = await supabase
+            .from('inventory_items')
+            .update({ quantity: item.quantity })
+            .eq('id', item.id);
+            
+          if (inventoryError) throw inventoryError;
+        }
+      } catch (error) {
+        console.error('Error saving order to Supabase:', error);
+        toast({
+          title: "Warning",
+          description: "Order processed locally, but there was an error saving to the database.",
+          variant: "destructive"
+        });
+      }
+    };
+    
     // Update state
     setInventoryItems(newInventoryItems);
     setTotalOrders(prev => prev + 1);
     setTotalRevenue(prev => prev + orderTotal);
     setOrders(prevOrders => [...prevOrders, newOrder]);
     clearCart();
+    
+    // Save to Supabase (non-blocking)
+    addOrderToSupabase();
     
     toast({
       title: "Order placed successfully",
@@ -246,6 +302,28 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       )
     );
     
+    // Update in Supabase
+    const updateSupabase = async () => {
+      try {
+        const { error } = await supabase
+          .from('inventory_items')
+          .update({ quantity: newQuantity })
+          .eq('id', id);
+          
+        if (error) throw error;
+      } catch (error) {
+        console.error('Error updating inventory in Supabase:', error);
+        toast({
+          title: "Warning",
+          description: "Inventory updated locally, but there was an error saving to the database.",
+          variant: "destructive"
+        });
+      }
+    };
+    
+    // Call non-blocking
+    updateSupabase();
+    
     toast({
       title: "Inventory updated",
       description: "The inventory has been updated successfully",
@@ -268,6 +346,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const value = {
     menuItems,
+    setMenuItems,
     cartItems,
     addToCart,
     removeFromCart,
