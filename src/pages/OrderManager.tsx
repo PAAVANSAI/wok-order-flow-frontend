@@ -60,12 +60,12 @@ const OrderManager = () => {
             const ingredients = ingredientsData.map((ingredient) => ({
               id: ingredient.inventory_items.id,
               name: ingredient.inventory_items.name,
-              quantity: parseFloat(ingredient.quantity)
+              quantity: parseFloat(ingredient.quantity.toString())
             }));
             
             return {
               ...item,
-              price: parseFloat(item.price),
+              price: parseFloat(item.price.toString()),
               ingredients,
               category: item.category
             } as MenuItem;

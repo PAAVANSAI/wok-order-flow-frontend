@@ -73,7 +73,7 @@ const AnalyticsDashboard = () => {
           
           orderByDay.set(date, {
             orders: existing.orders + 1,
-            revenue: existing.revenue + parseFloat(order.total)
+            revenue: existing.revenue + parseFloat(order.total.toString())
           });
         });
         
