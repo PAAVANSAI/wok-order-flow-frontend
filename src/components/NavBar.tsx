@@ -2,24 +2,53 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
-import { ShoppingCart, Package, BarChart2 } from 'lucide-react';
+import { ShoppingCart, Package, BarChart2, RefreshCw } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { useState, useEffect } from 'react';
 
 const NavBar = () => {
   const location = useLocation();
-  const { cartItems } = useApp();
+  const { cartItems, refreshData, isLoading } = useApp();
+  const [animateLogo, setAnimateLogo] = useState(false);
   
   const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
   
   const isActive = (path: string) => location.pathname === path;
+
+  // Logo animation on mount
+  useEffect(() => {
+    setAnimateLogo(true);
+    const timer = setTimeout(() => setAnimateLogo(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+  
+  // Function to trigger logo animation
+  const triggerLogoAnimation = () => {
+    setAnimateLogo(true);
+    setTimeout(() => setAnimateLogo(false), 1000);
+  };
   
   return (
     <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
       <nav className="container flex h-16 items-center justify-between">
         <div className="flex items-center">
-          <Link to="/" className="flex items-center mr-6">
-            <span className="text-2xl font-bold text-chickey-primary">Chickey</span>
-            <span className="text-2xl font-bold ml-1 text-chickey-dark">Woks</span>
+          <Link to="/" className="flex items-center mr-6" onClick={triggerLogoAnimation}>
+            <span 
+              className={cn(
+                "text-2xl font-bold text-chickey-primary transition-transform duration-500",
+                animateLogo && "animate-scale-in"
+              )}
+            >
+              Chickey
+            </span>
+            <span 
+              className={cn(
+                "text-2xl font-bold ml-1 text-chickey-dark transition-transform duration-500",
+                animateLogo && "animate-scale-in"
+              )}
+            >
+              Woks
+            </span>
           </Link>
           
           <div className="hidden sm:flex items-center space-x-4">
@@ -64,8 +93,21 @@ const NavBar = () => {
           </div>
         </div>
         
-        {location.pathname === '/orders' && (
-          <div className="flex items-center">
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => refreshData()} 
+            className={cn(
+              "p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-all duration-200",
+              isLoading && "animate-spin text-chickey-primary"
+            )}
+            disabled={isLoading}
+            aria-label="Refresh data"
+            title="Refresh data"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </button>
+        
+          {location.pathname === '/orders' && (
             <Link to="/orders" className="relative">
               <ShoppingCart className="h-6 w-6 text-chickey-primary" />
               {totalCartItems > 0 && (
@@ -74,8 +116,8 @@ const NavBar = () => {
                 </Badge>
               )}
             </Link>
-          </div>
-        )}
+          )}
+        </div>
       </nav>
     </div>
   );

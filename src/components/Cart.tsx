@@ -66,7 +66,17 @@ const Cart: React.FC = () => {
         <CardHeader className="pb-2">
           <CardTitle>Your Order</CardTitle>
           <CardDescription>{cartItems.length} items in your cart</CardDescription>
+          
+          {/* Place order button moved up into the header */}
+          <Button 
+            onClick={handlePlaceOrder} 
+            className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white mt-3
+            transition-all duration-300 hover:scale-105 active:scale-95 animate-fade-in"
+          >
+            Place Order - ₹{totalAmount.toFixed(2)}
+          </Button>
         </CardHeader>
+        
         <CardContent className="flex-grow overflow-hidden pb-0">
           <ScrollArea className="h-[calc(100vh-350px)] pr-4">
             {cartItems.map((item) => (
@@ -119,14 +129,6 @@ const Cart: React.FC = () => {
             <span className="font-semibold">Total Amount</span>
             <span className="font-bold text-chickey-primary">₹{totalAmount.toFixed(2)}</span>
           </div>
-          
-          <Button 
-            onClick={handlePlaceOrder} 
-            className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white mt-2 
-            transition-all duration-300 hover:scale-105 active:scale-95 animate-fade-in"
-          >
-            Place Order
-          </Button>
         </CardFooter>
       </Card>
 
@@ -148,7 +150,7 @@ const Cart: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex justify-center">
-            <AlertDialogAction className="bg-chickey-primary hover:bg-chickey-primary/90">
+            <AlertDialogAction className="bg-chickey-primary hover:bg-chickey-primary/90 transition-all duration-200 hover:scale-105 active:scale-95">
               Done
             </AlertDialogAction>
           </AlertDialogFooter>

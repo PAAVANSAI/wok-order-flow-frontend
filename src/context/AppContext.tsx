@@ -7,6 +7,7 @@ import { inventoryItems as initialInventoryItems } from '../data/inventoryItems'
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
+import { fetchOrderStats, useDataRefresh } from '@/hooks/use-data-refresh';
 
 // Define the Order type for tracking daily orders
 interface Order {
@@ -47,6 +48,8 @@ interface AppContextType {
   // Stats
   totalOrders: number;
   totalRevenue: number;
+  refreshData: () => void;
+  isLoading: boolean;
 
   // Daily order tracking
   orders: Order[];
@@ -68,21 +71,61 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   });
   
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [totalOrders, setTotalOrders] = useState<number>(() => {
-    const saved = localStorage.getItem('chickey-total-orders');
-    return saved ? parseInt(saved, 10) : 0;
-  });
-  
-  const [totalRevenue, setTotalRevenue] = useState<number>(() => {
-    const saved = localStorage.getItem('chickey-total-revenue');
-    return saved ? parseFloat(saved) : 0;
-  });
+  const [totalOrders, setTotalOrders] = useState<number>(0);
+  const [totalRevenue, setTotalRevenue] = useState<number>(0);
+  const { refreshTrigger, triggerRefresh, isLoading, setIsLoading } = useDataRefresh();
 
   // Initialize orders state
-  const [orders, setOrders] = useState<Order[]>(() => {
-    const savedOrders = localStorage.getItem('chickey-orders');
-    return savedOrders ? JSON.parse(savedOrders) : [];
-  });
+  const [orders, setOrders] = useState<Order[]>([]);
+  
+  // Load data from Supabase
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const { totalOrders, totalRevenue, orders: fetchedOrders, orderItems } = await fetchOrderStats();
+        
+        // Set the totals
+        setTotalOrders(totalOrders);
+        setTotalRevenue(totalRevenue);
+        
+        // Process orders to match our local format
+        if (fetchedOrders && fetchedOrders.length > 0) {
+          const processedOrders: Order[] = fetchedOrders.map(order => {
+            // Find all items for this order
+            const items = orderItems?.filter(item => item.order_id === order.id) || [];
+            
+            return {
+              id: order.id,
+              total: parseFloat(order.total.toString()),
+              timestamp: new Date(order.timestamp).getTime(),
+              items: items.map(item => ({
+                id: item.menu_item_id || item.id,
+                name: item.name,
+                price: parseFloat(item.price.toString()),
+                quantity: item.quantity
+              }))
+            };
+          });
+          
+          setOrders(processedOrders);
+        }
+        
+        console.log('Data loaded successfully from Supabase:', { totalOrders, totalRevenue });
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
+  }, [refreshTrigger]);
+  
+  // Refresh function
+  const refreshData = () => {
+    triggerRefresh();
+  };
   
   // Persist state to localStorage
   useEffect(() => {
@@ -92,19 +135,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   useEffect(() => {
     localStorage.setItem('chickey-inventory', JSON.stringify(inventoryItems));
   }, [inventoryItems]);
-  
-  useEffect(() => {
-    localStorage.setItem('chickey-total-orders', totalOrders.toString());
-  }, [totalOrders]);
-  
-  useEffect(() => {
-    localStorage.setItem('chickey-total-revenue', totalRevenue.toString());
-  }, [totalRevenue]);
-
-  // Persist orders to localStorage
-  useEffect(() => {
-    localStorage.setItem('chickey-orders', JSON.stringify(orders));
-  }, [orders]);
 
   // Cart functions
   const addToCart = (item: MenuItem) => {
@@ -217,6 +247,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           variant: "default",
         });
         
+        // Refresh data after successful order
+        refreshData();
+        
       } catch (error) {
         console.error('Error saving order to Supabase:', error);
         toast({
@@ -321,6 +354,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     totalRevenue,
     orders,
     getOrdersByDate,
+    refreshData,
+    isLoading,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

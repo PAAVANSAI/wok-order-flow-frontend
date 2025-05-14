@@ -13,7 +13,7 @@ import AddInventoryItemDialog from '@/components/AddInventoryItemDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 const InventoryManager = () => {
-  const { inventoryItems, totalOrders, totalRevenue } = useApp();
+  const { inventoryItems, totalOrders, totalRevenue, refreshData, isLoading } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -55,10 +55,12 @@ const InventoryManager = () => {
   
   useEffect(() => {
     refreshInventoryStats();
-  }, []);
+    // Refresh inventory stats whenever the app data is refreshed
+  }, [refreshData, isLoading]);
   
   const handleItemsAdded = () => {
     refreshInventoryStats();
+    refreshData();
   };
   
   return (
@@ -70,39 +72,39 @@ const InventoryManager = () => {
         <div className="flex flex-col gap-6">
           {/* Dashboard stats */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
+            <Card className="transition-transform hover:scale-102 hover:shadow-md duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Total Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold">{inventoryStats.totalItems}</p>
+                <p className="text-3xl font-bold animate-fade-in">{inventoryStats.totalItems}</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="transition-transform hover:scale-102 hover:shadow-md duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Low Stock Items</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-orange-500">{inventoryStats.lowStockItems}</p>
+                <p className="text-3xl font-bold text-orange-500 animate-fade-in">{inventoryStats.lowStockItems}</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="transition-transform hover:scale-102 hover:shadow-md duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Orders Processed</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-chickey-primary">{totalOrders}</p>
+                <p className="text-3xl font-bold text-chickey-primary animate-fade-in">{totalOrders}</p>
               </CardContent>
             </Card>
             
-            <Card>
+            <Card className="transition-transform hover:scale-102 hover:shadow-md duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Total Revenue</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-3xl font-bold text-chickey-primary">₹{totalRevenue.toFixed(2)}</p>
+                <p className="text-3xl font-bold text-chickey-primary animate-fade-in">₹{totalRevenue.toFixed(2)}</p>
               </CardContent>
             </Card>
           </div>
@@ -124,7 +126,8 @@ const InventoryManager = () => {
                 <Filter className="h-4 w-4 text-gray-400" />
                 <TabsList>
                   {categories.map(category => (
-                    <TabsTrigger key={category.id} value={category.id}>
+                    <TabsTrigger key={category.id} value={category.id} 
+                      className="transition-all duration-200 data-[state=active]:animate-scale-in">
                       {category.name}
                     </TabsTrigger>
                   ))}
@@ -134,7 +137,8 @@ const InventoryManager = () => {
             
             {/* Add Item Button */}
             <Button 
-              className="ml-auto bg-chickey-primary hover:bg-chickey-primary/90"
+              className="ml-auto bg-chickey-primary hover:bg-chickey-primary/90 transition-all duration-200 
+              hover:scale-105 active:scale-95"
               onClick={() => setIsAddDialogOpen(true)}
             >
               <PlusCircle className="h-4 w-4 mr-2" />
@@ -146,7 +150,10 @@ const InventoryManager = () => {
           <InventoryTable 
             category={activeCategory} 
             searchTerm={searchTerm} 
-            onInventoryUpdated={refreshInventoryStats}
+            onInventoryUpdated={() => {
+              refreshInventoryStats();
+              refreshData();
+            }}
           />
           
           {/* Add Item Dialog */}
