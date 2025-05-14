@@ -107,3 +107,29 @@
     opacity: 1;
   }
 }
+
+/* Button animation effects */
+@keyframes pulse-light {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.button-click {
+  animation: scale-click 0.2s ease-in-out;
+}
+
+@keyframes scale-click {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(0.95);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

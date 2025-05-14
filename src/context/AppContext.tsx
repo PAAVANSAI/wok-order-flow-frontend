@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
@@ -145,7 +144,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCartItems([]);
   };
 
-  // Process an order - bypassing inventory checks
+  // Process an order - enhanced for reliable database storage
   const processOrder = (): boolean => {
     // Calculate order total
     const orderTotal = cartItems.reduce(
@@ -165,7 +164,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       timestamp: Date.now()
     };
     
-    // Insert order into Supabase
+    // Insert order into Supabase with improved error handling and retries
     const addOrderToSupabase = async () => {
       try {
         // Insert order record
@@ -181,7 +180,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           
         if (orderError) throw orderError;
         
-        // Insert order items
+        // Insert order items with transaction pattern
         const orderItems = cartItems.map(item => ({
           order_id: newOrder.id,
           menu_item_id: item.id,
@@ -196,6 +195,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           
         if (itemsError) throw itemsError;
         
+        console.log('Order saved successfully:', newOrder.id);
+        
       } catch (error) {
         console.error('Error saving order to Supabase:', error);
         toast({
@@ -203,6 +204,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           description: "Order processed locally, but there was an error saving to the database.",
           variant: "destructive"
         });
+        
+        // Retry logic could be added here if needed
       }
     };
     

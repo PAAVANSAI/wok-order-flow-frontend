@@ -85,19 +85,23 @@ const Cart: React.FC = () => {
             </div>
           ))}
         </ScrollArea>
-      </CardContent>
-      <CardFooter className="flex flex-col mt-auto pt-4 border-t">
-        <div className="flex justify-between w-full py-2">
-          <span className="font-semibold">Total Amount</span>
-          <span className="font-bold text-chickey-primary">₹{totalAmount.toFixed(2)}</span>
-        </div>
         
-        <Button 
-          onClick={processOrder} 
-          className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white"
-        >
-          Place Order
-        </Button>
+        <div className="mt-4 mb-2 pt-3 border-t">
+          <div className="flex justify-between w-full py-2">
+            <span className="font-semibold">Total Amount</span>
+            <span className="font-bold text-chickey-primary">₹{totalAmount.toFixed(2)}</span>
+          </div>
+          
+          <Button 
+            onClick={processOrder} 
+            className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white mt-2 animate-fade-in"
+          >
+            Place Order
+          </Button>
+        </div>
+      </CardContent>
+      <CardFooter className="pt-2">
+        {/* Additional footer content can go here */}
       </CardFooter>
     </Card>
   );
