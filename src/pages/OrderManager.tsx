@@ -30,54 +30,76 @@ const OrderManager = () => {
     { id: 'dessert', name: 'Desserts' }
   ];
   
-  // Fetch menu items from Supabase
+  // Fetch menu items from Supabase with improved error handling
   useEffect(() => {
     const fetchMenuItems = async () => {
       try {
         setLoading(true);
+        
+        console.log('Fetching menu items from Supabase...');
         
         // Fetch menu items
         const { data: menuItemsData, error: menuItemsError } = await supabase
           .from('menu_items')
           .select('*');
           
-        if (menuItemsError) throw menuItemsError;
+        if (menuItemsError) {
+          console.error('Error fetching menu items:', menuItemsError);
+          throw menuItemsError;
+        }
+        
+        console.log(`Retrieved ${menuItemsData?.length || 0} menu items`);
         
         // For each menu item, fetch its ingredients
         const menuItemsWithIngredients = await Promise.all(
           menuItemsData.map(async (item) => {
-            const { data: ingredientsData, error: ingredientsError } = await supabase
-              .from('menu_item_ingredients')
-              .select(`
-                quantity,
-                inventory_items (id, name)
-              `)
-              .eq('menu_item_id', item.id);
+            try {
+              const { data: ingredientsData, error: ingredientsError } = await supabase
+                .from('menu_item_ingredients')
+                .select(`
+                  quantity,
+                  inventory_items (id, name)
+                `)
+                .eq('menu_item_id', item.id);
+                
+              if (ingredientsError) {
+                console.error(`Error fetching ingredients for menu item ${item.id}:`, ingredientsError);
+                throw ingredientsError;
+              }
               
-            if (ingredientsError) throw ingredientsError;
-            
-            // Transform ingredients data to match the expected format
-            const ingredients = ingredientsData.map((ingredient) => ({
-              id: ingredient.inventory_items.id,
-              name: ingredient.inventory_items.name,
-              quantity: parseFloat(ingredient.quantity.toString())
-            }));
-            
-            return {
-              ...item,
-              price: parseFloat(item.price.toString()),
-              ingredients,
-              category: item.category
-            } as MenuItem;
+              // Transform ingredients data to match the expected format
+              const ingredients = ingredientsData.map((ingredient) => ({
+                id: ingredient.inventory_items.id,
+                name: ingredient.inventory_items.name,
+                quantity: parseFloat(ingredient.quantity.toString())
+              }));
+              
+              return {
+                ...item,
+                price: parseFloat(item.price.toString()),
+                ingredients,
+                category: item.category
+              } as MenuItem;
+            } catch (err) {
+              console.error(`Error processing menu item ${item.id}:`, err);
+              // Return item without ingredients on error
+              return {
+                ...item,
+                price: parseFloat(item.price.toString()),
+                ingredients: [],
+                category: item.category
+              } as MenuItem;
+            }
           })
         );
         
         setMenuItems(menuItemsWithIngredients);
+        console.log('Menu items loaded successfully');
       } catch (error) {
         console.error('Error fetching menu items:', error);
         toast({
           title: 'Error',
-          description: 'Failed to load menu items.',
+          description: 'Failed to load menu items. Using local data instead.',
           variant: 'destructive'
         });
       } finally {
@@ -91,6 +113,11 @@ const OrderManager = () => {
   // Handle adding a new menu item
   const handleMenuItemAdded = (newMenuItem: MenuItem) => {
     setMenuItems([...contextMenuItems, newMenuItem]);
+    toast({
+      title: "Menu Item Added",
+      description: `${newMenuItem.name} has been added to the menu`,
+      variant: "default",
+    });
   };
 
   // Handle updating a menu item
@@ -100,6 +127,11 @@ const OrderManager = () => {
         item.id === updatedMenuItem.id ? updatedMenuItem : item
       )
     );
+    toast({
+      title: "Menu Item Updated",
+      description: `${updatedMenuItem.name} has been updated`,
+      variant: "default",
+    });
   };
   
   // Filter items by category and search term
@@ -115,18 +147,18 @@ const OrderManager = () => {
       <NavBar />
       <Header title="Order Management" />
       
-      <main className="flex-grow container py-6">
+      <main className="flex-grow container py-6 animate-fade-in">
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="col-span-2">
             <Tabs defaultValue="menu" value={activeTab} onValueChange={setActiveTab}>
               <div className="flex items-center justify-between mb-6">
                 <TabsList>
-                  <TabsTrigger value="menu">Menu</TabsTrigger>
-                  <TabsTrigger value="history">Order History</TabsTrigger>
+                  <TabsTrigger value="menu" className="transition-all duration-200 data-[state=active]:animate-scale-in">Menu</TabsTrigger>
+                  <TabsTrigger value="history" className="transition-all duration-200 data-[state=active]:animate-scale-in">Order History</TabsTrigger>
                 </TabsList>
               </div>
               
-              <TabsContent value="menu">
+              <TabsContent value="menu" className="animate-fade-in">
                 <div className="flex flex-col space-y-4">
                   <div className="flex flex-col sm:flex-row justify-between gap-4">
                     <div className="relative max-w-sm">
@@ -134,7 +166,7 @@ const OrderManager = () => {
                       <Input
                         type="search"
                         placeholder="Search menu items..."
-                        className="pl-8"
+                        className="pl-8 transition-all duration-200 focus:border-chickey-primary"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                       />
@@ -147,7 +179,11 @@ const OrderManager = () => {
                       <h2 className="text-xl font-bold">Menu</h2>
                       <TabsList>
                         {categories.map(category => (
-                          <TabsTrigger key={category.id} value={category.id}>
+                          <TabsTrigger 
+                            key={category.id} 
+                            value={category.id}
+                            className="transition-all duration-200 data-[state=active]:animate-scale-in"
+                          >
                             {category.name}
                           </TabsTrigger>
                         ))}
@@ -164,7 +200,10 @@ const OrderManager = () => {
                           <>
                             <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
                               {filteredItems.map(item => (
-                                <div key={item.id} className="relative">
+                                <div 
+                                  key={item.id} 
+                                  className="relative transition-transform duration-300 hover:scale-102 hover:shadow-lg"
+                                >
                                   <MenuCard item={item} />
                                   <div className="absolute top-2 right-2">
                                     <EditMenuItemDialog 
@@ -188,13 +227,13 @@ const OrderManager = () => {
                 </div>
               </TabsContent>
               
-              <TabsContent value="history" className="mt-0">
+              <TabsContent value="history" className="mt-0 animate-fade-in">
                 <OrderHistory />
               </TabsContent>
             </Tabs>
           </div>
           
-          <div>
+          <div className="animate-fade-in">
             <h2 className="text-xl font-bold mb-4">Cart</h2>
             <Cart />
           </div>

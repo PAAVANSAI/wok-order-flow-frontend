@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
@@ -5,6 +6,7 @@ import { menuItems as initialMenuItems } from '../data/menuItems';
 import { inventoryItems as initialInventoryItems } from '../data/inventoryItems';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 // Define the Order type for tracking daily orders
 interface Order {
@@ -151,9 +153,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       (total, item) => total + item.price * item.quantity, 0
     );
     
+    // Create a proper UUID for the order
+    const orderId = uuidv4();
+    
     // Create a new order record
     const newOrder: Order = {
-      id: `order-${Date.now()}`,
+      id: orderId,
       items: cartItems.map(item => ({
         id: item.id,
         name: item.name,
@@ -167,22 +172,27 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Insert order into Supabase with improved error handling and retries
     const addOrderToSupabase = async () => {
       try {
-        // Insert order record
+        // Insert order record with proper UUID
         const { data: orderData, error: orderError } = await supabase
           .from('orders')
           .insert({
-            id: newOrder.id,
+            id: orderId, // Using proper UUID format
             total: orderTotal,
             timestamp: new Date(newOrder.timestamp).toISOString()
           })
           .select()
           .single();
           
-        if (orderError) throw orderError;
+        if (orderError) {
+          console.error('Error inserting order:', orderError);
+          throw orderError;
+        }
+        
+        console.log('Order inserted successfully:', orderId);
         
         // Insert order items with transaction pattern
         const orderItems = cartItems.map(item => ({
-          order_id: newOrder.id,
+          order_id: orderId, // Using proper UUID format
           menu_item_id: item.id,
           name: item.name,
           price: item.price,
@@ -193,15 +203,25 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           .from('order_items')
           .insert(orderItems);
           
-        if (itemsError) throw itemsError;
+        if (itemsError) {
+          console.error('Error inserting order items:', itemsError);
+          throw itemsError;
+        }
         
-        console.log('Order saved successfully:', newOrder.id);
+        console.log('Order items saved successfully for order:', orderId);
+        
+        // Show confirmation toast on successful save
+        toast({
+          title: "Order saved successfully",
+          description: `Order ID: ${orderId.substring(0, 8)}... has been saved to the database`,
+          variant: "default",
+        });
         
       } catch (error) {
         console.error('Error saving order to Supabase:', error);
         toast({
           title: "Warning",
-          description: "Order processed locally, but there was an error saving to the database.",
+          description: "Order processed locally, but there was an error saving to the database. Please try again.",
           variant: "destructive"
         });
         
@@ -215,9 +235,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setOrders(prevOrders => [...prevOrders, newOrder]);
     clearCart();
     
-    // Save to Supabase (non-blocking)
+    // Save to Supabase
     addOrderToSupabase();
     
+    // Show order placement toast
     toast({
       title: "Order placed successfully",
       description: `Total: ₹${orderTotal.toFixed(2)}`,

@@ -117,6 +117,8 @@ const AnalyticsDashboard = () => {
       const startDate = format(currentDateRange.start, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
       const endDate = format(currentDateRange.end, "yyyy-MM-dd'T'HH:mm:ss.SSSxxx");
       
+      console.log("Fetching data for date range:", { startDate, endDate });
+      
       // Fetch order data for the selected period
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
@@ -124,7 +126,12 @@ const AnalyticsDashboard = () => {
         .gte('timestamp', startDate)
         .lte('timestamp', endDate);
         
-      if (ordersError) throw ordersError;
+      if (ordersError) {
+        console.error("Orders fetch error:", ordersError);
+        throw ordersError;
+      }
+      
+      console.log("Orders fetched:", ordersData?.length || 0);
       
       // Fetch inventory data
       const { data: inventoryData, error: inventoryError } = await supabase
@@ -133,27 +140,41 @@ const AnalyticsDashboard = () => {
         
       if (inventoryError) throw inventoryError;
 
-      // Fetch order items data for the selected period
+      // Fetch order items data for the selected period with a join
       const { data: orderItemsData, error: orderItemsError } = await supabase
         .from('order_items')
-        .select('*, orders!inner(*)')
+        .select(`
+          id,
+          name,
+          quantity,
+          price,
+          order_id,
+          orders!inner(timestamp)
+        `)
         .gte('orders.timestamp', startDate)
         .lte('orders.timestamp', endDate);
         
-      if (orderItemsError) throw orderItemsError;
+      if (orderItemsError) {
+        console.error("Order items fetch error:", orderItemsError);
+        throw orderItemsError;
+      }
+      
+      console.log("Order items fetched:", orderItemsData?.length || 0);
       
       // Process order stats by day
       const orderByDay = new Map<string, {orders: number, revenue: number}>();
       
-      ordersData.forEach(order => {
-        const date = formatDate(new Date(order.timestamp));
-        const existing = orderByDay.get(date) || {orders: 0, revenue: 0};
-        
-        orderByDay.set(date, {
-          orders: existing.orders + 1,
-          revenue: existing.revenue + parseFloat(order.total.toString())
+      if (ordersData && ordersData.length > 0) {
+        ordersData.forEach(order => {
+          const date = formatDate(new Date(order.timestamp));
+          const existing = orderByDay.get(date) || {orders: 0, revenue: 0};
+          
+          orderByDay.set(date, {
+            orders: existing.orders + 1,
+            revenue: existing.revenue + parseFloat(order.total.toString())
+          });
         });
-      });
+      }
       
       const orderStatsArray = Array.from(orderByDay.entries()).map(([date, stats]) => ({
         date,
@@ -161,39 +182,47 @@ const AnalyticsDashboard = () => {
         revenue: stats.revenue
       }));
       
+      console.log("Processed order stats:", orderStatsArray);
+      
       // Process top selling items
       const itemSales = new Map<string, number>();
       
-      orderItemsData.forEach(item => {
-        const existing = itemSales.get(item.name) || 0;
-        itemSales.set(item.name, existing + item.quantity);
-      });
+      if (orderItemsData && orderItemsData.length > 0) {
+        orderItemsData.forEach(item => {
+          const existing = itemSales.get(item.name) || 0;
+          itemSales.set(item.name, existing + item.quantity);
+        });
+      }
       
       const topItems = Array.from(itemSales.entries())
         .map(([name, quantity]) => ({name, quantity}))
         .sort((a, b) => b.quantity - a.quantity)
         .slice(0, 5);
       
+      console.log("Top selling items:", topItems);
+      
       // Set the processed data
       setOrderStats(orderStatsArray);
       setTopSellingItems(topItems);
       
       // For inventory usage, we're estimating based on current levels vs estimated starting levels
-      setInventoryUsage(
-        inventoryData.map(item => ({
-          id: item.id,
-          name: item.name,
-          initialQuantity: item.quantity + 20, // Placeholder - in a real system this would be from history
-          currentQuantity: item.quantity,
-          usage: 20, // Placeholder calculated usage
-          unit: item.unit
-        }))
-      );
+      if (inventoryData) {
+        setInventoryUsage(
+          inventoryData.map(item => ({
+            id: item.id,
+            name: item.name,
+            initialQuantity: item.quantity + 20, // Placeholder - in a real system this would be from history
+            currentQuantity: item.quantity,
+            usage: 20, // Placeholder calculated usage
+            unit: item.unit
+          }))
+        );
+      }
     } catch (error) {
       console.error('Error fetching analytics data:', error);
       toast({
         title: 'Error',
-        description: 'Failed to load analytics data.',
+        description: 'Failed to load analytics data. Please check console for details.',
         variant: 'destructive'
       });
     } finally {
@@ -210,35 +239,53 @@ const AnalyticsDashboard = () => {
     }
     return 'All Time';
   };
+
+  // Function to handle manual refresh of data
+  const handleRefreshData = () => {
+    fetchData();
+    toast({
+      title: "Refreshing data",
+      description: "Dashboard data is being updated...",
+    });
+  };
   
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">
       <NavBar />
       <Header title="Owner Dashboard" />
       
-      <main className="flex-grow container py-6">
+      <main className="flex-grow container py-6 animate-fade-in">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 gap-4">
           <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
           
           <div className="flex flex-wrap items-center gap-2">
+            <Button 
+              onClick={handleRefreshData} 
+              variant="outline" 
+              size="sm"
+              className="transition-transform duration-200 hover:scale-105 active:scale-95"
+            >
+              Refresh Data
+            </Button>
+            
             <Tabs 
               value={filterPeriod} 
               onValueChange={(value) => handlePeriodChange(value as FilterPeriod)}
               className="w-full md:w-auto"
             >
               <TabsList>
-                <TabsTrigger value="month">Monthly</TabsTrigger>
-                <TabsTrigger value="year">Yearly</TabsTrigger>
-                <TabsTrigger value="all">All Time</TabsTrigger>
+                <TabsTrigger value="month" className="transition-all duration-200 data-[state=active]:animate-scale-in">Monthly</TabsTrigger>
+                <TabsTrigger value="year" className="transition-all duration-200 data-[state=active]:animate-scale-in">Yearly</TabsTrigger>
+                <TabsTrigger value="all" className="transition-all duration-200 data-[state=active]:animate-scale-in">All Time</TabsTrigger>
               </TabsList>
             </Tabs>
             
             {filterPeriod === 'month' && (
               <Select value={selectedMonth.getMonth().toString()} onValueChange={handleMonthChange}>
-                <SelectTrigger className="w-[150px]">
+                <SelectTrigger className="w-[150px] transition-all duration-200 hover:border-chickey-primary">
                   <SelectValue placeholder="Select month" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="animate-fade-in">
                   {months.map((month) => (
                     <SelectItem key={month.value} value={month.value.toString()}>
                       {month.label}
@@ -250,10 +297,10 @@ const AnalyticsDashboard = () => {
             
             {(filterPeriod === 'month' || filterPeriod === 'year') && (
               <Select value={selectedYear.toString()} onValueChange={handleYearChange}>
-                <SelectTrigger className="w-[100px]">
+                <SelectTrigger className="w-[100px] transition-all duration-200 hover:border-chickey-primary">
                   <SelectValue placeholder="Year" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="animate-fade-in">
                   {years.map((year) => (
                     <SelectItem key={year.value} value={year.value.toString()}>
                       {year.label}
@@ -270,37 +317,37 @@ const AnalyticsDashboard = () => {
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-          <Card>
+          <Card className="transition-transform duration-300 hover:shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Total Orders</CardTitle>
               <CardDescription>Current period</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-chickey-primary">
+              <p className="text-3xl font-bold text-chickey-primary animate-fade-in">
                 {loading ? '-' : orderStats.reduce((sum, day) => sum + day.orders, 0)}
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="transition-transform duration-300 hover:shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Total Revenue</CardTitle>
               <CardDescription>Current period</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-chickey-secondary">
+              <p className="text-3xl font-bold text-chickey-secondary animate-fade-in">
                 {loading ? '-' : `₹${orderStats.reduce((sum, day) => sum + day.revenue, 0).toFixed(2)}`}
               </p>
             </CardContent>
           </Card>
           
-          <Card>
+          <Card className="transition-transform duration-300 hover:shadow-lg">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">Inventory Items</CardTitle>
               <CardDescription>Current count</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-3xl font-bold text-chickey-dark">
+              <p className="text-3xl font-bold text-chickey-dark animate-fade-in">
                 {loading ? '-' : inventoryUsage.length}
               </p>
             </CardContent>
@@ -309,13 +356,13 @@ const AnalyticsDashboard = () => {
         
         <Tabs defaultValue="orders">
           <TabsList className="mb-6">
-            <TabsTrigger value="orders">Order Analysis</TabsTrigger>
-            <TabsTrigger value="inventory">Inventory Usage</TabsTrigger>
+            <TabsTrigger value="orders" className="transition-all duration-200 data-[state=active]:animate-scale-in">Order Analysis</TabsTrigger>
+            <TabsTrigger value="inventory" className="transition-all duration-200 data-[state=active]:animate-scale-in">Inventory Usage</TabsTrigger>
           </TabsList>
           
           <TabsContent value="orders">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="col-span-1 lg:col-span-2">
+              <Card className="col-span-1 lg:col-span-2 transition-transform duration-300 hover:shadow-lg">
                 <CardHeader>
                   <CardTitle>Daily Orders & Revenue</CardTitle>
                   <CardDescription>Performance for {getPeriodDisplayText()}</CardDescription>
@@ -330,7 +377,7 @@ const AnalyticsDashboard = () => {
                       <p>No order data available for the selected period</p>
                     </div>
                   ) : (
-                    <ResponsiveContainer width="100%" height={400}>
+                    <ResponsiveContainer width="100%" height={400} className="animate-fade-in">
                       <BarChart
                         data={orderStats.sort((a, b) => a.date.localeCompare(b.date))}
                         margin={{ top: 20, right: 30, left: 20, bottom: 70 }}
@@ -344,17 +391,18 @@ const AnalyticsDashboard = () => {
                             name === 'revenue' ? `₹${value}` : value,
                             name === 'revenue' ? 'Revenue' : 'Orders'
                           ]}
+                          animationDuration={300}
                         />
                         <Legend />
-                        <Bar dataKey="orders" yAxisId="left" fill="#F97316" name="Orders" />
-                        <Bar dataKey="revenue" yAxisId="right" fill="#FBBF24" name="Revenue (₹)" />
+                        <Bar dataKey="orders" yAxisId="left" fill="#F97316" name="Orders" animationDuration={1500} />
+                        <Bar dataKey="revenue" yAxisId="right" fill="#FBBF24" name="Revenue (₹)" animationDuration={1500} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="transition-transform duration-300 hover:shadow-lg">
                 <CardHeader>
                   <CardTitle>Top Selling Items</CardTitle>
                   <CardDescription>Most popular menu items</CardDescription>
@@ -369,7 +417,7 @@ const AnalyticsDashboard = () => {
                       <p>No sales data available for the selected period</p>
                     </div>
                   ) : (
-                    <Table>
+                    <Table className="animate-fade-in">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Item Name</TableHead>
@@ -378,7 +426,7 @@ const AnalyticsDashboard = () => {
                       </TableHeader>
                       <TableBody>
                         {topSellingItems.map(item => (
-                          <TableRow key={item.name}>
+                          <TableRow key={item.name} className="transition-colors hover:bg-muted/50">
                             <TableCell>{item.name}</TableCell>
                             <TableCell className="text-right">{item.quantity}</TableCell>
                           </TableRow>
@@ -389,7 +437,7 @@ const AnalyticsDashboard = () => {
                 </CardContent>
               </Card>
               
-              <Card>
+              <Card className="transition-transform duration-300 hover:shadow-lg">
                 <CardHeader>
                   <CardTitle>Daily Orders</CardTitle>
                   <CardDescription>Detailed breakdown</CardDescription>
@@ -404,7 +452,7 @@ const AnalyticsDashboard = () => {
                       <p>No order data available for the selected period</p>
                     </div>
                   ) : (
-                    <Table>
+                    <Table className="animate-fade-in">
                       <TableHeader>
                         <TableRow>
                           <TableHead>Date</TableHead>
@@ -417,7 +465,7 @@ const AnalyticsDashboard = () => {
                           .sort((a, b) => b.date.localeCompare(a.date))
                           .slice(0, 10)
                           .map(day => (
-                            <TableRow key={day.date}>
+                            <TableRow key={day.date} className="transition-colors hover:bg-muted/50">
                               <TableCell>{formatDisplayDate(day.date)}</TableCell>
                               <TableCell className="text-right">{day.orders}</TableCell>
                               <TableCell className="text-right">₹{day.revenue.toFixed(2)}</TableCell>
@@ -432,7 +480,7 @@ const AnalyticsDashboard = () => {
           </TabsContent>
           
           <TabsContent value="inventory">
-            <Card>
+            <Card className="transition-transform duration-300 hover:shadow-lg">
               <CardHeader>
                 <CardTitle>Inventory Usage Analysis</CardTitle>
                 <CardDescription>Current period consumption</CardDescription>
@@ -443,7 +491,7 @@ const AnalyticsDashboard = () => {
                     <p>Loading data...</p>
                   </div>
                 ) : (
-                  <Table>
+                  <Table className="animate-fade-in">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Item Name</TableHead>
@@ -458,7 +506,7 @@ const AnalyticsDashboard = () => {
                         inventoryUsage
                           .sort((a, b) => b.usage - a.usage)
                           .map(item => (
-                            <TableRow key={item.id}>
+                            <TableRow key={item.id} className="transition-colors hover:bg-muted/50">
                               <TableCell>{item.name}</TableCell>
                               <TableCell className="text-right">{item.initialQuantity}</TableCell>
                               <TableCell className="text-right">{item.currentQuantity}</TableCell>
