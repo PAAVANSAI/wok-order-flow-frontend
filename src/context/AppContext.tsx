@@ -4,7 +4,7 @@ import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
 import { menuItems as initialMenuItems } from '../data/menuItems';
 import { inventoryItems as initialInventoryItems } from '../data/inventoryItems';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchOrderStats, useDataRefresh } from '@/hooks/use-data-refresh';
@@ -176,6 +176,61 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setCartItems([]);
   };
 
+  // Reduce inventory based on order items and their ingredients
+  const updateInventoryFromOrder = async (orderItems: CartItem[]) => {
+    try {
+      // For each ordered item
+      for (const orderItem of orderItems) {
+        // Find the menu item to get its ingredients
+        const menuItem = menuItems.find(item => item.id === orderItem.id);
+        
+        if (menuItem && menuItem.ingredients && menuItem.ingredients.length > 0) {
+          // For each ingredient in the menu item
+          for (const ingredient of menuItem.ingredients) {
+            // Find the inventory item
+            const inventoryItem = inventoryItems.find(item => item.id === ingredient.id);
+            
+            if (inventoryItem) {
+              // Calculate how much to reduce based on order quantity
+              const reduceAmount = ingredient.quantity * orderItem.quantity;
+              const newQuantity = Math.max(0, inventoryItem.quantity - reduceAmount);
+              
+              // Update the inventory in Supabase
+              const { error } = await supabase
+                .from('inventory_items')
+                .update({ quantity: newQuantity })
+                .eq('id', inventoryItem.id);
+                
+              if (error) {
+                console.error(`Error updating inventory item ${inventoryItem.id}:`, error);
+                throw error;
+              }
+              
+              // Update local state
+              setInventoryItems(prevItems => 
+                prevItems.map(item => 
+                  item.id === inventoryItem.id ? { ...item, quantity: newQuantity } : item
+                )
+              );
+              
+              console.log(`Reduced ${reduceAmount} ${inventoryItem.unit} of ${inventoryItem.name}`);
+            }
+          }
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error updating inventory from order:', error);
+      toast({
+        title: "Inventory Update Error",
+        description: "There was an error updating the inventory. Please check stock levels manually.",
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
+
   // Process an order - enhanced for reliable database storage
   const processOrder = (): boolean => {
     // Calculate order total
@@ -240,6 +295,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         
         console.log('Order items saved successfully for order:', orderId);
         
+        // Update inventory based on order items
+        await updateInventoryFromOrder(cartItems);
+        
         // Show confirmation toast on successful save
         toast({
           title: "Order saved successfully",
@@ -266,10 +324,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setTotalOrders(prev => prev + 1);
     setTotalRevenue(prev => prev + orderTotal);
     setOrders(prevOrders => [...prevOrders, newOrder]);
-    clearCart();
     
     // Save to Supabase
     addOrderToSupabase();
+    
+    // Clear cart after order processing
+    clearCart();
     
     // Show order placement toast
     toast({

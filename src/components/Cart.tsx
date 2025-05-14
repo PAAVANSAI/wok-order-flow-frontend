@@ -4,7 +4,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Minus, Plus, TrashIcon } from 'lucide-react';
+import { Minus, Plus, TrashIcon, Check } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 import {
   AlertDialog,
@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 
 const Cart: React.FC = () => {
   const { cartItems, removeFromCart, updateCartItemQuantity, processOrder } = useApp();
@@ -40,7 +41,7 @@ const Cart: React.FC = () => {
 
   if (cartItems.length === 0) {
     return (
-      <Card className="h-full flex flex-col">
+      <Card className="h-full flex flex-col animate-fade-in">
         <CardHeader>
           <CardTitle>Your Order</CardTitle>
           <CardDescription>Your cart is empty</CardDescription>
@@ -62,7 +63,7 @@ const Cart: React.FC = () => {
 
   return (
     <>
-      <Card className="h-full flex flex-col">
+      <Card className="h-full flex flex-col animate-fade-in">
         <CardHeader className="pb-2">
           <CardTitle>Your Order</CardTitle>
           <CardDescription>{cartItems.length} items in your cart</CardDescription>
@@ -133,15 +134,16 @@ const Cart: React.FC = () => {
       </Card>
 
       <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent className="max-w-md animate-scale-in">
+        <AlertDialogContent className="max-w-md animate-enter duration-500">
           <AlertDialogHeader>
             <div className="mx-auto mb-4 h-24 w-24 rounded-full bg-green-100 flex items-center justify-center">
-              <svg className="h-16 w-16 text-green-600 animate-fade-in" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+              <div className="relative">
+                <div className="absolute inset-0 animate-ping bg-green-300 rounded-full opacity-75"></div>
+                <Check className="h-16 w-16 text-green-600 animate-scale-in relative z-10" strokeWidth={3} />
+              </div>
             </div>
-            <AlertDialogTitle className="text-center text-2xl">Order Placed Successfully!</AlertDialogTitle>
-            <AlertDialogDescription className="text-center">
+            <AlertDialogTitle className="text-center text-2xl animate-fade-in">Order Placed Successfully!</AlertDialogTitle>
+            <AlertDialogDescription className="text-center animate-fade-in">
               <div className="space-y-2 mt-3">
                 <p><span className="font-medium">Order ID:</span> {orderId}</p>
                 <p><span className="font-medium">Amount:</span> ₹{orderTotal.toFixed(2)}</p>
@@ -149,7 +151,7 @@ const Cart: React.FC = () => {
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex justify-center">
+          <AlertDialogFooter className="flex justify-center animate-fade-in">
             <AlertDialogAction className="bg-chickey-primary hover:bg-chickey-primary/90 transition-all duration-200 hover:scale-105 active:scale-95">
               Done
             </AlertDialogAction>
