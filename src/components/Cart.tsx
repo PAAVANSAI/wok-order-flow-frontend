@@ -16,7 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useState } from 'react';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 const Cart: React.FC = () => {
   const { cartItems, removeFromCart, updateCartItemQuantity, processOrder } = useApp();
@@ -27,45 +27,40 @@ const Cart: React.FC = () => {
   const totalAmount = cartItems.reduce((total, item) => total + (item.price * item.quantity), 0);
 
   const handlePlaceOrder = () => {
+    if (cartItems.length === 0) {
+      toast({
+        title: "Cart is empty",
+        description: "Please add some items to your cart before placing an order",
+        variant: "destructive"
+      });
+      return;
+    }
+
     // Generate a short order ID for display purposes
     const displayOrderId = `ORD-${Math.floor(Math.random() * 10000)}`;
     setOrderId(displayOrderId);
     setOrderTotal(totalAmount);
     
     // Process the order first
-    processOrder();
+    const success = processOrder();
     
     // Then show confirmation
-    setShowConfirmation(true);
+    if (success) {
+      setShowConfirmation(true);
+    }
   };
-
-  if (cartItems.length === 0) {
-    return (
-      <Card className="h-full flex flex-col animate-fade-in">
-        <CardHeader>
-          <CardTitle>Your Order</CardTitle>
-          <CardDescription>Your cart is empty</CardDescription>
-        </CardHeader>
-        <CardContent className="flex-grow">
-          <p className="text-center text-muted-foreground py-8">Add items from the menu to get started</p>
-        </CardContent>
-        <CardFooter className="border-t pt-4">
-          <Button 
-            disabled
-            className="w-full bg-chickey-primary hover:bg-chickey-primary/90 text-white opacity-50 cursor-not-allowed"
-          >
-            Place Order
-          </Button>
-        </CardFooter>
-      </Card>
-    );
-  }
 
   return (
     <>
       <Card className="h-full flex flex-col animate-fade-in">
         <CardHeader className="pb-2">
-          <CardTitle>Your Order</CardTitle>
+          <CardTitle className="animate-scale-in">
+            <div className="flex items-center">
+              <span className="text-chickey-primary font-bold mr-1">Chickey</span> 
+              <span className="text-chickey-dark">Woks</span>
+              <span className="ml-2">- Your Order</span>
+            </div>
+          </CardTitle>
           <CardDescription>{cartItems.length} items in your cart</CardDescription>
           
           {/* Place order button moved up into the header */}
@@ -80,48 +75,66 @@ const Cart: React.FC = () => {
         
         <CardContent className="flex-grow overflow-hidden pb-0">
           <ScrollArea className="h-[calc(100vh-350px)] pr-4">
-            {cartItems.map((item) => (
-              <div key={item.id} className="mb-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">{item.name}</h3>
-                    <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
+            {cartItems.length > 0 ? (
+              cartItems.map((item) => (
+                <div key={item.id} className="mb-4 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-sm text-muted-foreground">₹{item.price.toFixed(2)}</p>
+                      {item.ingredients && item.ingredients.length > 0 && (
+                        <div className="mt-1">
+                          <p className="text-xs text-gray-500">Ingredients:</p>
+                          <ul className="text-xs text-gray-400">
+                            {item.ingredients.map((ingredient, idx) => (
+                              <li key={idx} className="inline-block mr-2">
+                                {ingredient.name} ({ingredient.quantity})
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7 transition-transform duration-200 hover:scale-110 active:scale-95" 
+                        onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
+                      >
+                        <Minus className="h-3 w-3" />
+                      </Button>
+                      <span className="w-8 text-center">{item.quantity}</span>
+                      <Button 
+                        variant="outline" 
+                        size="icon" 
+                        className="h-7 w-7 transition-transform duration-200 hover:scale-110 active:scale-95" 
+                        onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
+                      >
+                        <Plus className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="h-7 w-7 text-red-500 transition-transform duration-200 hover:scale-110 active:scale-95" 
+                        onClick={() => removeFromCart(item.id)}
+                      >
+                        <TrashIcon className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7 transition-transform duration-200 hover:scale-110 active:scale-95" 
-                      onClick={() => updateCartItemQuantity(item.id, item.quantity - 1)}
-                    >
-                      <Minus className="h-3 w-3" />
-                    </Button>
-                    <span className="w-8 text-center">{item.quantity}</span>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7 transition-transform duration-200 hover:scale-110 active:scale-95" 
-                      onClick={() => updateCartItemQuantity(item.id, item.quantity + 1)}
-                    >
-                      <Plus className="h-3 w-3" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="h-7 w-7 text-red-500 transition-transform duration-200 hover:scale-110 active:scale-95" 
-                      onClick={() => removeFromCart(item.id)}
-                    >
-                      <TrashIcon className="h-3 w-3" />
-                    </Button>
+                  <div className="flex justify-between mt-1 text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
+                  <Separator className="my-2" />
                 </div>
-                <div className="flex justify-between mt-1 text-sm">
-                  <span>Subtotal</span>
-                  <span>₹{(item.price * item.quantity).toFixed(2)}</span>
-                </div>
-                <Separator className="my-2" />
+              ))
+            ) : (
+              <div className="text-center py-10 text-gray-400 animate-fade-in">
+                Your cart is empty. Add items from the menu to get started.
               </div>
-            ))}
+            )}
           </ScrollArea>
         </CardContent>
         

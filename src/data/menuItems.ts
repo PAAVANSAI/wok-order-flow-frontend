@@ -26,7 +26,8 @@ export const menuItems: MenuItem[] = [
       { id: 'chicken-patty', name: 'Chicken Patty', quantity: 1 },
       { id: 'burger-bun', name: 'Burger Bun', quantity: 1 },
       { id: 'cheese', name: 'Cheese', quantity: 1 },
-      { id: 'mayonnaise', name: 'Mayonnaise', quantity: 1 }
+      { id: 'mayonnaise', name: 'Mayonnaise', quantity: 1 },
+      { id: 'onion', name: 'Onion', quantity: 0.25 }
     ]
   },
   {
@@ -39,7 +40,8 @@ export const menuItems: MenuItem[] = [
       { id: 'chicken-patty', name: 'Chicken Patty', quantity: 1 },
       { id: 'burger-bun', name: 'Burger Bun', quantity: 1 },
       { id: 'cheese', name: 'Cheese', quantity: 1 },
-      { id: 'sauce-packets', name: 'Hot Sauce', quantity: 2 }
+      { id: 'sauce-packets', name: 'Hot Sauce', quantity: 2 },
+      { id: 'capsicum', name: 'Capsicum', quantity: 0.5 }
     ]
   },
   {
@@ -52,6 +54,7 @@ export const menuItems: MenuItem[] = [
       { id: 'chicken-patty', name: 'Chicken Patty', quantity: 1 },
       { id: 'sandwich-bread', name: 'Sandwich Bread', quantity: 2 },
       { id: 'onion', name: 'Onion', quantity: 0.5 },
+      { id: 'capsicum', name: 'Capsicum', quantity: 0.25 },
       { id: 'mayonnaise', name: 'Mayonnaise', quantity: 1 }
     ]
   },
@@ -87,7 +90,8 @@ export const menuItems: MenuItem[] = [
       { id: 'burger-bun', name: 'Burger Bun', quantity: 1 },
       { id: 'onion', name: 'Onion', quantity: 0.5 },
       { id: 'capsicum', name: 'Capsicum', quantity: 0.5 },
-      { id: 'cheese', name: 'Cheese', quantity: 1 }
+      { id: 'cheese', name: 'Cheese', quantity: 1 },
+      { id: 'mayonnaise', name: 'Mayonnaise', quantity: 0.5 }
     ]
   },
   {

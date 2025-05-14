@@ -10,17 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddMenuItemDialog from '@/components/AddMenuItemDialog';
 import EditMenuItemDialog from '@/components/EditMenuItemDialog';
 import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { MenuItem } from '@/data/menuItems';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { Button } from '@/components/ui/button';
 
 const OrderManager = () => {
-  const { menuItems: contextMenuItems, setMenuItems } = useApp();
+  const { menuItems: contextMenuItems, setMenuItems, refreshData, isLoading } = useApp();
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('menu');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   const categories = [
     { id: 'all', name: 'All Items' },
@@ -133,6 +135,19 @@ const OrderManager = () => {
       variant: "default",
     });
   };
+
+  // Handle manual refresh
+  const handleRefresh = () => {
+    setRefreshing(true);
+    refreshData();
+    setTimeout(() => {
+      setRefreshing(false);
+      toast({
+        title: "Data Refreshed",
+        description: "Latest data has been loaded successfully",
+      });
+    }, 1000);
+  };
   
   // Filter items by category and search term
   const filteredItems = contextMenuItems
@@ -148,6 +163,14 @@ const OrderManager = () => {
       <Header title="Order Management" />
       
       <main className="flex-grow container py-6 animate-fade-in">
+        {/* Restaurant Name with Animation */}
+        <div className="mb-8 text-center">
+          <h1 className="text-3xl font-bold animate-scale-in transition-all duration-500 hover:scale-105">
+            <span className="text-chickey-primary">Chickey</span> <span className="text-chickey-dark">Woks</span>
+          </h1>
+          <p className="text-muted-foreground animate-fade-in">Order Management System</p>
+        </div>
+        
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="col-span-2">
             <Tabs defaultValue="menu" value={activeTab} onValueChange={setActiveTab}>
@@ -156,6 +179,16 @@ const OrderManager = () => {
                   <TabsTrigger value="menu" className="transition-all duration-200 data-[state=active]:animate-scale-in">Menu</TabsTrigger>
                   <TabsTrigger value="history" className="transition-all duration-200 data-[state=active]:animate-scale-in">Order History</TabsTrigger>
                 </TabsList>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="transition-all duration-200 hover:scale-110 active:scale-95"
+                  onClick={handleRefresh}
+                  disabled={refreshing || isLoading}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh Data
+                </Button>
               </div>
               
               <TabsContent value="menu" className="animate-fade-in">
@@ -202,7 +235,7 @@ const OrderManager = () => {
                               {filteredItems.map(item => (
                                 <div 
                                   key={item.id} 
-                                  className="relative transition-transform duration-300 hover:scale-102 hover:shadow-lg"
+                                  className="relative transition-transform duration-300 hover:scale-102 hover:shadow-lg animate-fade-in"
                                 >
                                   <MenuCard item={item} />
                                   <div className="absolute top-2 right-2">
@@ -234,7 +267,6 @@ const OrderManager = () => {
           </div>
           
           <div className="animate-fade-in">
-            <h2 className="text-xl font-bold mb-4">Cart</h2>
             <Cart />
           </div>
         </div>

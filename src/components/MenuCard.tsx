@@ -42,7 +42,7 @@ const MenuCard: React.FC<MenuCardProps> = ({ item }) => {
             return (
               <li key={index} className={`flex items-center ${isLowStock ? 'text-amber-600' : ''}`}>
                 {isLowStock && <AlertCircle className="h-3 w-3 mr-1 inline" />}
-                {ingredient.name}: {ingredient.quantity} {inventoryItem?.unit || 'unit(s)'}
+                {ingredient.name} ({ingredient.quantity} {inventoryItem?.unit || 'unit(s)'})
               </li>
             );
           })}

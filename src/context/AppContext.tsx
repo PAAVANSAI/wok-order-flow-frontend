@@ -1,10 +1,9 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
 import { menuItems as initialMenuItems } from '../data/menuItems';
 import { inventoryItems as initialInventoryItems } from '../data/inventoryItems';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchOrderStats, useDataRefresh } from '@/hooks/use-data-refresh';
@@ -315,8 +314,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           description: "Order processed locally, but there was an error saving to the database. Please try again.",
           variant: "destructive"
         });
-        
-        // Retry logic could be added here if needed
       }
     };
     
