@@ -16,6 +16,7 @@ interface InventoryItem {
   unit: string;
   min_level: number;
   category: string;
+  wattages?: number; // Added wattages field
 }
 
 interface InventoryTableProps {
@@ -156,13 +157,14 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             <TableHead>Quantity</TableHead>
             <TableHead>Unit</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead>Wattages</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 Loading inventory items...
               </TableCell>
             </TableRow>
@@ -182,6 +184,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
                   </TableCell>
                   <TableCell>{item.unit}</TableCell>
                   <TableCell>{getLevelIndicator(item)}</TableCell>
+                  <TableCell>{item.wattages || 0}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button 
@@ -226,7 +229,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             })
           ) : (
             <TableRow>
-              <TableCell colSpan={6} className="h-24 text-center">
+              <TableCell colSpan={7} className="h-24 text-center">
                 No inventory items found matching your criteria.
               </TableCell>
             </TableRow>

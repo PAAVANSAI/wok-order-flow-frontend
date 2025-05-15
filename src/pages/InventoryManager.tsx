@@ -13,7 +13,7 @@ import AddInventoryItemDialog from '@/components/AddInventoryItemDialog';
 import { supabase } from '@/integrations/supabase/client';
 
 const InventoryManager = () => {
-  const { inventoryItems, totalOrders, totalRevenue, refreshData, isLoading } = useApp();
+  const { inventoryItems, totalOrders, refreshData, isLoading } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -71,7 +71,7 @@ const InventoryManager = () => {
       <main className="flex-grow container py-6">
         <div className="flex flex-col gap-6">
           {/* Dashboard stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="transition-transform hover:scale-102 hover:shadow-md duration-300">
               <CardHeader className="pb-2">
                 <CardTitle className="text-lg">Total Items</CardTitle>
@@ -96,15 +96,6 @@ const InventoryManager = () => {
               </CardHeader>
               <CardContent>
                 <p className="text-3xl font-bold text-chickey-primary animate-fade-in">{totalOrders}</p>
-              </CardContent>
-            </Card>
-            
-            <Card className="transition-transform hover:scale-102 hover:shadow-md duration-300">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg">Total Revenue</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-3xl font-bold text-chickey-primary animate-fade-in">₹{totalRevenue.toFixed(2)}</p>
               </CardContent>
             </Card>
           </div>
