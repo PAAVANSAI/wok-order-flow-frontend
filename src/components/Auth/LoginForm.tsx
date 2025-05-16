@@ -25,6 +25,17 @@ const LoginForm = () => {
     setIsLoading(true);
 
     try {
+      // Validate inputs
+      if (!email.trim() || !password.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Please enter both email and password",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
       // For demo purposes, we'll use predefined logins
       if ((email === 'staff@example.com' && password === 'staffpass' && role === 'staff') || 
           (email === 'owner@example.com' && password === 'ownerpass' && role === 'owner')) {
