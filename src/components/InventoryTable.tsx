@@ -16,7 +16,7 @@ interface InventoryItem {
   unit: string;
   min_level: number;
   category: string;
-  wattages?: number; // Added wattages field
+  wastages?: number; // Updated from wattages to wastages
 }
 
 interface InventoryTableProps {
@@ -33,6 +33,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
   const [inventoryItems, setInventoryItems] = useState<InventoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatedValues, setUpdatedValues] = useState<Record<string, number>>({});
+  const [updatedWastages, setUpdatedWastages] = useState<Record<string, number>>({});
 
   useEffect(() => {
     fetchInventoryItems();
@@ -64,6 +65,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       
       // Reset updatedValues when fetching new items
       setUpdatedValues({});
+      setUpdatedWastages({});
     } catch (error) {
       console.error('Error fetching inventory items:', error);
       toast({
@@ -91,27 +93,60 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
     
     setUpdatedValues(prev => ({ ...prev, [id]: Math.max(0, numValue) }));
   };
+
+  const handleDirectWastageInput = (id: string, value: string) => {
+    const numValue = parseInt(value, 10);
+    if (isNaN(numValue)) return;
+    
+    setUpdatedWastages(prev => ({ ...prev, [id]: Math.max(0, numValue) }));
+  };
   
   const saveUpdatedQuantity = async (id: string) => {
-    if (updatedValues[id] === undefined) return;
+    if (updatedValues[id] === undefined && updatedWastages[id] === undefined) return;
     
     try {
+      const currentItem = inventoryItems.find(item => item.id === id);
+      if (!currentItem) return;
+
+      const updateData: { quantity?: number; wastages?: number } = {};
+      
+      if (updatedValues[id] !== undefined) {
+        updateData.quantity = updatedValues[id];
+      }
+      
+      if (updatedWastages[id] !== undefined) {
+        updateData.wastages = updatedWastages[id];
+      }
+      
       const { error } = await supabase
         .from('inventory_items')
-        .update({ quantity: updatedValues[id] })
+        .update(updateData)
         .eq('id', id);
       
       if (error) throw error;
       
       // Update local state
       setInventoryItems(items => 
-        items.map(item => 
-          item.id === id ? { ...item, quantity: updatedValues[id] } : item
-        )
+        items.map(item => {
+          if (item.id === id) {
+            return { 
+              ...item, 
+              quantity: updatedValues[id] !== undefined ? updatedValues[id] : item.quantity,
+              wastages: updatedWastages[id] !== undefined ? updatedWastages[id] : item.wastages
+            };
+          }
+          return item;
+        })
       );
       
-      // Clear the updated value after saving
+      // Clear the updated values after saving
       setUpdatedValues(prev => {
+        const newValues = { ...prev };
+        delete newValues[id];
+        return newValues;
+      });
+      
+      setUpdatedWastages(prev => {
         const newValues = { ...prev };
         delete newValues[id];
         return newValues;
@@ -119,7 +154,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       
       toast({
         title: "Inventory Updated",
-        description: "Inventory quantity has been updated successfully",
+        description: "Inventory data has been updated successfully",
       });
       
       // Notify parent component if needed
@@ -131,7 +166,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
       console.error('Error updating inventory:', error);
       toast({
         title: "Error",
-        description: "Failed to update inventory quantity",
+        description: "Failed to update inventory data",
         variant: "destructive"
       });
     }
@@ -157,7 +192,7 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             <TableHead>Quantity</TableHead>
             <TableHead>Unit</TableHead>
             <TableHead>Status</TableHead>
-            <TableHead>Wattages</TableHead>
+            <TableHead>Wastages</TableHead>
             <TableHead>Actions</TableHead>
           </TableRow>
         </TableHeader>
@@ -170,21 +205,30 @@ const InventoryTable: React.FC<InventoryTableProps> = ({
             </TableRow>
           ) : inventoryItems.length > 0 ? (
             inventoryItems.map((item) => {
-              const isUpdating = updatedValues[item.id] !== undefined;
-              const displayQuantity = isUpdating ? updatedValues[item.id] : item.quantity;
+              const isUpdating = updatedValues[item.id] !== undefined || updatedWastages[item.id] !== undefined;
+              const displayQuantity = updatedValues[item.id] !== undefined ? updatedValues[item.id] : item.quantity;
+              const displayWastage = updatedWastages[item.id] !== undefined ? updatedWastages[item.id] : (item.wastages || 0);
               
               return (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="capitalize">{item.category}</TableCell>
                   <TableCell className="font-semibold">
-                    <div className={`transition-colors ${isUpdating ? 'text-chickey-primary' : ''}`}>
+                    <div className={`transition-colors ${updatedValues[item.id] !== undefined ? 'text-chickey-primary' : ''}`}>
                       {displayQuantity}
                     </div>
                   </TableCell>
                   <TableCell>{item.unit}</TableCell>
                   <TableCell>{getLevelIndicator(item)}</TableCell>
-                  <TableCell>{item.wattages || 0}</TableCell>
+                  <TableCell>
+                    <Input
+                      value={displayWastage}
+                      onChange={(e) => handleDirectWastageInput(item.id, e.target.value)}
+                      className={`w-20 h-7 text-center ${updatedWastages[item.id] !== undefined ? 'border-chickey-primary' : ''}`}
+                      type="number"
+                      min="0"
+                    />
+                  </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button 

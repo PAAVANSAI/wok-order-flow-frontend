@@ -1,14 +1,24 @@
 
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useApp } from '@/context/AppContext';
-import { ShoppingCart, Package, BarChart2, RefreshCw } from 'lucide-react';
+import { ShoppingCart, Package, BarChart2, RefreshCw, LogOut, User } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState, useEffect } from 'react';
 
 const NavBar = () => {
   const location = useLocation();
-  const { cartItems, refreshData, isLoading } = useApp();
+  const navigate = useNavigate();
+  const { cartItems, refreshData, isLoading, currentUserRole, logout, isOwner } = useApp();
   const [animateLogo, setAnimateLogo] = useState(false);
   
   const totalCartItems = cartItems.reduce((total, item) => total + item.quantity, 0);
@@ -28,11 +38,16 @@ const NavBar = () => {
     setTimeout(() => setAnimateLogo(false), 1000);
   };
   
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+  
   return (
     <div className="sticky top-0 z-10 border-b bg-white shadow-sm">
       <nav className="container flex h-16 items-center justify-between">
         <div className="flex items-center">
-          <Link to="/" className="flex items-center mr-6" onClick={triggerLogoAnimation}>
+          <Link to="/orders" className="flex items-center mr-6" onClick={triggerLogoAnimation}>
             <span 
               className={cn(
                 "text-2xl font-bold text-chickey-primary transition-transform duration-500",
@@ -78,18 +93,20 @@ const NavBar = () => {
               Inventory Management
             </Link>
             
-            <Link 
-              to="/analytics" 
-              className={cn(
-                "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                isActive('/analytics') 
-                  ? "bg-chickey-accent text-chickey-primary" 
-                  : "text-gray-700 hover:bg-gray-100"
-              )}
-            >
-              <BarChart2 className="mr-2 h-4 w-4" />
-              Owner Dashboard
-            </Link>
+            {isOwner && (
+              <Link 
+                to="/analytics" 
+                className={cn(
+                  "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
+                  isActive('/analytics') 
+                    ? "bg-chickey-accent text-chickey-primary" 
+                    : "text-gray-700 hover:bg-gray-100"
+                )}
+              >
+                <BarChart2 className="mr-2 h-4 w-4" />
+                Owner Dashboard
+              </Link>
+            )}
           </div>
         </div>
         
@@ -106,7 +123,7 @@ const NavBar = () => {
           >
             <RefreshCw className="h-4 w-4" />
           </button>
-        
+          
           {location.pathname === '/orders' && (
             <Link to="/orders" className="relative">
               <ShoppingCart className="h-6 w-6 text-chickey-primary" />
@@ -117,6 +134,23 @@ const NavBar = () => {
               )}
             </Link>
           )}
+          
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="relative">
+                <User className="h-4 w-4 mr-2" />
+                {currentUserRole && currentUserRole.charAt(0).toUpperCase() + currentUserRole.slice(1)}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuLabel>Account</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-red-600 cursor-pointer" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </nav>
     </div>

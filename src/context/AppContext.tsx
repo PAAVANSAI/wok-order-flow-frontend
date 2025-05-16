@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { MenuItem } from '../data/menuItems';
 import { InventoryItem } from '../data/inventoryItems';
@@ -7,6 +8,7 @@ import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { v4 as uuidv4 } from 'uuid';
 import { fetchOrderStats, useDataRefresh } from '@/hooks/use-data-refresh';
+import { UserRole, useAuth } from '@/hooks/use-auth';
 
 // Define the Order type for tracking daily orders
 interface Order {
@@ -53,6 +55,14 @@ interface AppContextType {
   // Daily order tracking
   orders: Order[];
   getOrdersByDate: (date: Date) => Order[];
+  
+  // Authentication
+  currentUserRole: UserRole;
+  setCurrentUserRole: (role: UserRole) => void;
+  logout: () => void;
+  isAuthenticated: boolean;
+  isOwner: boolean;
+  isStaff: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -76,6 +86,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Initialize orders state
   const [orders, setOrders] = useState<Order[]>([]);
+  
+  // Use the auth hook
+  const auth = useAuth();
   
   // Load data from Supabase
   useEffect(() => {
@@ -413,6 +426,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     getOrdersByDate,
     refreshData,
     isLoading,
+    // Auth
+    currentUserRole: auth.currentUserRole,
+    setCurrentUserRole: auth.setCurrentUserRole,
+    logout: auth.logout,
+    isAuthenticated: auth.isAuthenticated,
+    isOwner: auth.isOwner,
+    isStaff: auth.isStaff
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
